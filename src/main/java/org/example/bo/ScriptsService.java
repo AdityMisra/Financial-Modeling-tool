@@ -30,8 +30,12 @@ public class ScriptsService {
             String scriptPath = Paths.get(System.getProperty("user.dir"), "src", "main", "resources", "PythonScripts", "extract_tables.py").toString();
             System.out.println("Python script path: " + scriptPath);
 
+            String gaapTaxonamy = Paths.get(System.getProperty("user.dir"), "src", "main", "resources", "GAAP_Taxonomy.csv").toString();
+            String outputPath = Paths.get(System.getProperty("user.dir"), "src", "main", "resources", "PythonScripts").toString(); // TODO: Fix the output path
+            
+            
             // Prepare command
-            String[] command = {"python3", scriptPath, companiesArg, yearsArg};
+            String[] command = {"python3", scriptPath, companiesArg, yearsArg, gaapTaxonamy, outputPath};
             System.out.println("Command: " + String.join(" ", command));
 
             // Execute the Python script

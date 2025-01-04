@@ -1,13 +1,16 @@
 import os
 import sys
+
+print(f"Python interpreter: {sys.executable}")
+
 import pandas as pd
 import requests
 import json
 
 # Paths
 
-CSV_INPUT_PATH = "/Users/adityamisra/IdeaProjects/FinancialModeling/src/main/resources/GAAP_Taxonomy.csv"
-OUTPUT_DIR = "/Users/adityamisra/IdeaProjects/FinancialModeling/output"
+CSV_INPUT_PATH = ""
+OUTPUT_DIR = ""
 
 # SEC API details
 BASE_URL = "https://data.sec.gov/api/xbrl/companyconcept"
@@ -47,7 +50,7 @@ SHADES = {
 
 # Function to process hierarchy with depth
 def process_hierarchy_with_depth(data, definitions):
-    # Normalize the 'definition' column
+	# Normalize the 'definition' column
     data['definition'] = data['definition'].str.strip().str.lower()
 
     # Normalize the definitions list
@@ -130,6 +133,10 @@ def save_results(results, output_dir):
 if __name__ == "__main__":
     try:
         print("=== Python Script Execution Started ===")
+        print(f"CSV_INPUT_PATH: {sys.argv[3]}")
+        print(f"OUTPUT_DIR: {sys.argv[4]}")
+        CSV_INPUT_PATH = sys.argv[3]
+        OUTPUT_DIR = sys.argv[4]
 
         # Parse arguments from Spring Boot
         companies = json.loads(sys.argv[1])
