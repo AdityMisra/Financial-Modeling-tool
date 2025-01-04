@@ -1,0 +1,6 @@
+org/example/Main.class
+org/example/controller/ScriptsController.class
+org/example/bo/ScriptsService.class
+org/example/vo/extractTableResponse.class
+org/example/dao/ScriptsDAO.class
+org/example/vo/extractTableRequest.class
