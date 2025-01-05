@@ -3,4 +3,5 @@ org/example/controller/ScriptsController.class
 org/example/bo/ScriptsService.class
 org/example/vo/extractTableResponse.class
 org/example/dao/ScriptsDAO.class
+SwaggerConfig.class
 org/example/vo/extractTableRequest.class
