@@ -26,77 +26,68 @@ public class ScriptsController {
     @Autowired
     private ScriptsService scriptsService;
 
-    /**
-     * Extract financial tables from SEC data
-     */
     @PostMapping("/extract-tables")
     public extractTableResponse extractTables(@RequestBody extractTableRequest request) {
         return scriptsService.extractTables(request.getCompanies(), request.getYears());
     }
 
-    /**
-     * List all generated files (both CSV and HTML)
-     */
     @GetMapping("/files/list")
     public ResponseEntity<Map<String, List<String>>> listFiles() {
         try {
             Map<String, List<String>> files = new HashMap<>();
             files.put("csvFiles", scriptsService.getGeneratedCsvFiles());
-            files.put("htmlFiles", scriptsService.getGeneratedHtmlFiles());
             return ResponseEntity.ok(files);
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
         }
     }
 
-    /**
-     * View CSV file content
-     */
-    @GetMapping("/files/view/csv/{fileName}")
-    public ResponseEntity<String> viewCsvContent(@PathVariable String fileName) {
+    @GetMapping("/files/view/csv/{company}/{statement}/{year}")
+    public ResponseEntity<String> viewCsvContent(
+            @PathVariable String company,
+            @PathVariable String statement,
+            @PathVariable Integer year) {
         try {
-            String content = scriptsService.getFileContent("csvs", fileName);
+            String csvContent = scriptsService.getCsvContent(company, statement, year);
             return ResponseEntity.ok()
                     .contentType(MediaType.TEXT_PLAIN)
-                    .body(content);
+                    .body(csvContent);
         } catch (IOException e) {
             return ResponseEntity.notFound().build();
         }
     }
 
-    /**
-     * Download CSV file
-     */
-    @GetMapping("/files/download/csv/{fileName}")
-    public ResponseEntity<Resource> downloadCsvFile(@PathVariable String fileName) {
+    @GetMapping("/files/download/csv/{company}/{statement}/{year}")
+    public ResponseEntity<Resource> downloadCsvFile(
+            @PathVariable String company,
+            @PathVariable String statement,
+            @PathVariable Integer year) {
         try {
-            Resource resource = scriptsService.getFileAsResource("csvs", fileName);
+            Resource resource = scriptsService.getCsvAsResource(company, statement, year);
+            String filename = String.format("%s_%s_%d.csv", company, statement, year);
+
             return ResponseEntity.ok()
                     .contentType(MediaType.parseMediaType("text/csv"))
                     .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=\"" + fileName + "\"")
+                            "attachment; filename=\"" + filename + "\"")
                     .body(resource);
         } catch (IOException e) {
             return ResponseEntity.notFound().build();
         }
     }
 
-    /**
-     * View HTML content for direct rendering
-     */
-    @GetMapping("/files/view/html/{fileName}")
-    public ResponseEntity<String> viewHtmlContent(@PathVariable String fileName) {
+    @GetMapping("/files/view/html/{company}/{statement}/{year}")
+    public ResponseEntity<String> viewStatementAsHtml(
+            @PathVariable String company,
+            @PathVariable String statement,
+            @PathVariable Integer year) {
         try {
-            String content = scriptsService.getFileContent("html", fileName);
+            String html = scriptsService.generateHtml(company, statement, year);
             return ResponseEntity.ok()
                     .contentType(MediaType.TEXT_HTML)
-                    .body(content);
+                    .body(html);
         } catch (IOException e) {
             return ResponseEntity.notFound().build();
         }
     }
-
-
-
-
 }

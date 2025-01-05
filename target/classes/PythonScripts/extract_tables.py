@@ -1,12 +1,9 @@
 import os
 import pandas as pd
 import requests
-from typing import Dict, List, Any, Tuple
+from typing import Dict, List, Any
 import json
 import sys
-import os
-import pandas as pd
-from pandas.io.formats.style import Styler
 
 # API Configuration
 BASE_URL = "https://data.sec.gov/api/xbrl/companyconcept"
@@ -16,36 +13,6 @@ HEADERS = {
     "Accept-Encoding": "gzip, deflate",
     "Host": "data.sec.gov"
 }
-
-def generate_shades(base_color: Tuple[int, int, int], depth_levels: int, increment: int) -> dict:
-    """
-    Generate shades by lightening the base color for each depth level.
-    """
-    shades = {}
-    for depth in range(depth_levels):
-        r = min(base_color[0] + increment * depth, 255)
-        g = min(base_color[1] + increment * depth, 255)
-        b = min(base_color[2] + increment * depth, 255)
-        shades[depth] = f'background-color: rgb({int(r)}, {int(g)}, {int(b)}); color: {"white" if depth < 3 else "black"}; text-align: left;'
-    return shades
-
-def apply_styling(df: pd.DataFrame, shades: dict) -> pd.io.formats.style.Styler:
-    """
-    Apply color styling to DataFrame based on depth.
-    """
-    def style_row(row):
-        return [shades.get(row['depth'], 'background-color: #d0e7ff; color: black; text-align: left;')] * len(row)
-    return df.style.apply(style_row, axis=1)
-
-def add_indentation(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Add indentation to the 'API Key' column based on the depth.
-    """
-    styled_df = df.copy()
-    styled_df['API Key'] = styled_df.apply(
-        lambda row: '\u00A0' * (4 * row['depth']) + str(row['API Key']), axis=1
-    )
-    return styled_df
 
 def process_hierarchy_with_depth(data: pd.DataFrame, definitions: List[str]) -> pd.DataFrame:
     """
@@ -99,93 +66,21 @@ def process_hierarchy(hierarchy_df: pd.DataFrame, cik: str, year: int) -> pd.Dat
 
     return pd.DataFrame(valid_entries)
 
-def save_to_yearly_structure(df: pd.DataFrame, company_name: str, year: int, statement_type: str, output_dir: str):
+def save_to_csv(df: pd.DataFrame, company_name: str, year: int, statement_type: str, output_dir: str):
     """
-    Save data to yearly folder structure.
+    Save data to CSV with the structure:
+    statement_csvs/Company/Year/Company_statement_year.csv
     """
-    # Create company directory
-    company_dir = os.path.join(output_dir, company_name)
+    # Create directory structure
+    company_dir = os.path.join(output_dir, "statement_csvs", company_name, str(year))
     os.makedirs(company_dir, exist_ok=True)
-
-    # Create year directory
-    year_dir = os.path.join(company_dir, str(year))
-    os.makedirs(year_dir, exist_ok=True)
 
     # Save CSV
     csv_filename = f"{company_name}_{statement_type}_{year}.csv"
-    csv_path = os.path.join(year_dir, csv_filename)
+    csv_path = os.path.join(company_dir, csv_filename)
     df.to_csv(csv_path, index=False)
     print(f"Saved {csv_filename}")
 
-    # Save HTML with styling
-    html_filename = f"{company_name}_{statement_type}_{year}.html"
-    html_path = os.path.join(year_dir, html_filename)
-
-    # Apply styling based on statement type
-    SHADES = {
-        "balance": generate_shades((1, 5, 18), depth_levels=6, increment=40),
-        "cash_flow": generate_shades((0, 43, 0), depth_levels=6, increment=40),
-        "income": generate_shades((58, 47, 0), depth_levels=6, increment=40)
-    }
-
-    df_indented = add_indentation(df)
-
-    if statement_type in SHADES:
-        styled_df = apply_styling(df_indented, SHADES[statement_type])
-    else:
-        styled_df = df_indented.style
-
-    html_content = f"""
-    <html>
-    <head>
-        <title>{company_name} {statement_type} {year}</title>
-        <style>
-            body {{
-                font-family: Arial, sans-serif;
-                margin: 20px;
-                background-color: #f5f5f5;
-            }}
-            .container {{
-                background-color: white;
-                padding: 20px;
-                border-radius: 5px;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            }}
-            h1 {{
-                color: #333;
-                margin-bottom: 20px;
-            }}
-            table {{
-                border-collapse: collapse;
-                width: 100%;
-                margin: 20px 0;
-                background-color: white;
-            }}
-            th, td {{
-                padding: 12px 8px;
-                border: 1px solid #ddd;
-            }}
-            th {{
-                background-color: #f8f9fa;
-                font-weight: bold;
-            }}
-            tr:hover {{
-                opacity: 0.9;
-            }}
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <h1>{company_name} {statement_type} {year}</h1>
-            {styled_df.to_html()}
-        </div>
-    </body>
-    </html>
-    """
-
-    with open(html_path, 'w', encoding='utf-8') as f:
-        f.write(html_content)
-    print(f"Saved {html_filename}")
 
 def main():
     try:
@@ -220,22 +115,22 @@ def main():
     hierarchy_df_cash_flow = process_hierarchy_with_depth(data, cash_flow_definitions)
     hierarchy_df_income_stmt = process_hierarchy_with_depth(data, income_stmt_definitions)
 
-    # Process each company and year separately
+    # Process each company and year
     for company_name, cik in companies.items():
         print(f"Processing {company_name} (CIK: {cik})...")
 
         for year in years:
             print(f"Processing year {year}...")
 
-            # Process each statement type
+            # Process and save each statement type
             bs_df = process_hierarchy(hierarchy_df_balance_sheet, cik, year)
-            save_to_yearly_structure(bs_df, company_name, year, "balance", OUTPUT_DIR)
+            save_to_csv(bs_df, company_name, year, "balance", OUTPUT_DIR)
 
             cf_df = process_hierarchy(hierarchy_df_cash_flow, cik, year)
-            save_to_yearly_structure(cf_df, company_name, year, "cash_flow", OUTPUT_DIR)
+            save_to_csv(cf_df, company_name, year, "cash_flow", OUTPUT_DIR)
 
             is_df = process_hierarchy(hierarchy_df_income_stmt, cik, year)
-            save_to_yearly_structure(is_df, company_name, year, "income", OUTPUT_DIR)
+            save_to_csv(is_df, company_name, year, "income", OUTPUT_DIR)
 
 if __name__ == "__main__":
     main()
