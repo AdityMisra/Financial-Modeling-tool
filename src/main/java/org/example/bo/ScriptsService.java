@@ -2,6 +2,7 @@ package org.example.bo;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.example.vo.extractTableResponse;
+import org.example.vo.ThreeStatementModelResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -9,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -42,6 +44,9 @@ public class ScriptsService {
         this.objectMapper = new ObjectMapper();
     }
 
+    /**
+     * Extract tables from SEC data
+     */
     public extractTableResponse extractTables(Map<String, String> companies, List<Integer> years) {
         try {
             String companiesArg = objectMapper.writeValueAsString(companies);
@@ -51,17 +56,18 @@ public class ScriptsService {
             String gaapTaxonomy = Paths.get(System.getProperty("user.dir"), gaapTaxonomyPath).toString();
             String outputPath = Paths.get(System.getProperty("user.dir"), outputBaseDir).toString();
 
-            // Create base directory for statements
+            // Create directory structure
             Files.createDirectories(Paths.get(outputPath, "statement_csvs"));
 
             String[] command = {"python3", scriptPath, companiesArg, yearsArg, gaapTaxonomy, outputPath};
-            Process process = executeScript(command);
+            System.out.println("Executing command: " + String.join(" ", command));
 
-            List<String> csvFiles = listFiles(Paths.get(outputPath, "statement_csvs"));
+            Process process = executeScript(command);
+            List<String> csvFiles = getGeneratedCsvFiles();
 
             return new extractTableResponse(
                     "Success",
-                    String.format("Generated financial statements", csvFiles.size()),
+                    String.format("Generated %d CSV files", csvFiles.size()),
                     csvFiles,
                     Collections.emptyList()
             );
@@ -77,60 +83,52 @@ public class ScriptsService {
         }
     }
 
-
+    /**
+     * Execute Python script
+     */
     private Process executeScript(String[] command) throws IOException, InterruptedException {
         ProcessBuilder pb = new ProcessBuilder(command);
         pb.redirectErrorStream(true);
         Process process = pb.start();
 
+        StringBuilder output = new StringBuilder();
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
             String line;
             while ((line = reader.readLine()) != null) {
+                output.append(line).append("\n");
                 System.out.println("Python Output: " + line);
             }
         }
 
         int exitCode = process.waitFor();
         if (exitCode != 0) {
-            throw new RuntimeException("Python script failed with exit code " + exitCode);
+            String errorMessage = output.toString();
+            System.err.println("Full Python output: " + errorMessage);
+            throw new RuntimeException("Python script failed with exit code " + exitCode + "\nOutput: " + errorMessage);
         }
 
         return process;
     }
 
+    /**
+     * Get list of generated CSV files
+     */
     public List<String> getGeneratedCsvFiles() {
         Path basePath = Paths.get(System.getProperty("user.dir"), outputBaseDir, "statement_csvs");
-        Map<String, Map<String, List<String>>> fileStructure = new HashMap<>();
-
         try (Stream<Path> paths = Files.walk(basePath)) {
-            List<String> files = paths
-                    .filter(Files::isRegularFile)
-                    .map(path -> {
-                        // Get relative path from base directory
-                        Path relativePath = basePath.relativize(path);
-                        return relativePath.toString();
-                    })
-                    .collect(Collectors.toList());
-
-            return files;
-        } catch (IOException e) {
-            return new ArrayList<>();
-        }
-    }
-
-
-    private List<String> listFiles(Path directory) {
-        try (Stream<Path> paths = Files.walk(directory)) {
             return paths
                     .filter(Files::isRegularFile)
-                    .map(Path::getFileName)
-                    .map(Path::toString)
+                    .filter(path -> path.toString().endsWith(".csv"))
+                    .map(path -> basePath.relativize(path).toString())
                     .collect(Collectors.toList());
         } catch (IOException e) {
             return new ArrayList<>();
         }
     }
 
+    /**
+     * Get CSV content as string
+     */
     public String getCsvContent(String company, String statement, int year) throws IOException {
         Path csvPath = Paths.get(
                 System.getProperty("user.dir"),
@@ -143,7 +141,9 @@ public class ScriptsService {
         return Files.readString(csvPath);
     }
 
-
+    /**
+     * Get CSV as downloadable resource
+     */
     public Resource getCsvAsResource(String company, String statement, int year) throws IOException {
         Path csvPath = Paths.get(
                 System.getProperty("user.dir"),
@@ -153,8 +153,8 @@ public class ScriptsService {
                 String.valueOf(year),
                 String.format("%s_%s_%d.csv", company, statement, year)
         );
-        Resource resource = new UrlResource(csvPath.toUri());
 
+        Resource resource = new UrlResource(csvPath.toUri());
         if (resource.exists()) {
             return resource;
         } else {
@@ -162,65 +162,196 @@ public class ScriptsService {
         }
     }
 
+    /**
+     * Generate 3-statement model
+     */
+    public ThreeStatementModelResponse generate3StatementModel(String company, Integer year)
+            throws IOException, InterruptedException {
 
-    public String generateHtml(String company, String statement, int year) throws IOException {
-        String csvContent = getCsvContent(company, statement, year);
+        System.out.println("\nStarting 3-statement model generation for " + company + " year " + year);
 
-        // Parse CSV content
-        List<String[]> records = new ArrayList<>();
-        try (CSVParser parser = CSVParser.parse(csvContent, CSVFormat.DEFAULT.withHeader())) {
-            for (CSVRecord record : parser) {
-                String[] row = new String[record.size()];
-                for (int i = 0; i < record.size(); i++) {
-                    row[i] = record.get(i);
-                }
-                records.add(row);
+        // Clean and normalize all paths
+        Path rootDir = Paths.get(System.getProperty("user.dir")).normalize();
+        Path baseOutputDir = rootDir.resolve(outputBaseDir.trim()).normalize(); // Add trim() to remove any spaces
+        Path statementCsvDir = baseOutputDir.resolve("statement_csvs").normalize();
+        Path companyDir = statementCsvDir.resolve(company).normalize();
+        Path companyYearPath = companyDir.resolve(String.valueOf(year)).normalize();
+
+        // Debug print the directory structure
+        System.out.println("\nChecking directory structure:");
+        System.out.println("Root directory: " + rootDir);
+        System.out.println("Base output directory: " + baseOutputDir);
+        System.out.println("Statement CSV directory: " + statementCsvDir);
+        System.out.println("Company directory: " + companyDir);
+        System.out.println("Company year directory: " + companyYearPath);
+
+        // First check if base directories exist, create if they don't
+        if (!Files.exists(baseOutputDir)) {
+            Files.createDirectories(baseOutputDir);
+            System.out.println("Created base output directory: " + baseOutputDir);
+        }
+        if (!Files.exists(statementCsvDir)) {
+            Files.createDirectories(statementCsvDir);
+            System.out.println("Created statement CSV directory: " + statementCsvDir);
+        }
+        if (!Files.exists(companyDir)) {
+            Files.createDirectories(companyDir);
+            System.out.println("Created company directory: " + companyDir);
+        }
+        if (!Files.exists(companyYearPath)) {
+            Files.createDirectories(companyYearPath);
+            System.out.println("Created company year directory: " + companyYearPath);
+        }
+
+        // Define and check required input files
+        Map<String, Path> requiredFiles = new HashMap<>();
+        requiredFiles.put("balance", companyYearPath.resolve(company + "_balance_" + year + ".csv").normalize());
+        requiredFiles.put("income", companyYearPath.resolve(company + "_income_" + year + ".csv").normalize());
+        requiredFiles.put("cash_flow", companyYearPath.resolve(company + "_cash_flow_" + year + ".csv").normalize());
+
+        // Verify all required files exist
+        System.out.println("\nChecking required files:");
+        List<String> missingFiles = new ArrayList<>();
+        for (Map.Entry<String, Path> entry : requiredFiles.entrySet()) {
+            System.out.println("Checking " + entry.getKey() + " file: " + entry.getValue());
+            if (!Files.exists(entry.getValue())) {
+                missingFiles.add(entry.getKey() + " (" + entry.getValue() + ")");
             }
         }
 
-        // Generate styled HTML table
-        StringBuilder tableHtml = new StringBuilder();
-        tableHtml.append("<table class='financial-table'>");
+        if (!missingFiles.isEmpty()) {
+            throw new FileNotFoundException("Missing required input files:\n" + String.join("\n", missingFiles));
+        }
 
-        // Add headers
-        if (!records.isEmpty()) {
+        // Setup Python script execution
+        Path scriptPath = rootDir.resolve("src")
+                .resolve("main")
+                .resolve("resources")
+                .resolve("PythonScripts")
+                .resolve("generate_3statementmodel.py")
+                .normalize();
+
+        if (!Files.exists(scriptPath)) {
+            throw new FileNotFoundException("Python script not found: " + scriptPath);
+        }
+
+        // Prepare output directory
+        Path modelOutputDir = companyYearPath.resolve("3statement_model").normalize();
+        Files.createDirectories(modelOutputDir);
+
+        // Log execution details
+        System.out.println("\nExecuting 3-statement model generation:");
+        System.out.println("Script path: " + scriptPath);
+        System.out.println("Input directory: " + companyYearPath);
+        System.out.println("Output directory: " + modelOutputDir);
+
+        // Prepare command with normalized paths
+        String[] command = {
+                "python3",
+                scriptPath.toString(),
+                company,
+                year.toString(),
+                baseOutputDir.toString(),
+                baseOutputDir.toString()
+        };
+
+        // Execute Python script
+        Process process = executeScript(command);
+
+        // Verify and read output file
+        Path outputFile = modelOutputDir.resolve(company + "_3statementmodel_" + year + ".csv").normalize();
+
+        // Wait for file to be generated
+        int maxAttempts = 10;
+        int attempt = 0;
+        while (!Files.exists(outputFile) && attempt < maxAttempts) {
+            Thread.sleep(500); // Wait half second between checks
+            attempt++;
+        }
+
+        if (!Files.exists(outputFile)) {
+            throw new FileNotFoundException("Output file was not generated: " + outputFile);
+        }
+
+        // Read metrics from the generated file
+        Map<String, Double> metrics = readMetricsFromFile(outputFile.toString());
+
+        return new ThreeStatementModelResponse(
+                "success",
+                "3-statement model generated successfully",
+                outputFile.toString(),
+                metrics
+        );
+    }
+
+    /**
+     * Read metrics from generated CSV file
+     */
+    private Map<String, Double> readMetricsFromFile(String filePath) throws IOException {
+        Map<String, Double> metrics = new HashMap<>();
+        Path path = Paths.get(filePath);
+
+        try (CSVParser parser = CSVParser.parse(path,
+                StandardCharsets.UTF_8, CSVFormat.DEFAULT.withFirstRecordAsHeader())) {
+            CSVRecord record = parser.iterator().next();
+            for (String header : parser.getHeaderNames()) {
+                if (!header.equals("Company") && !header.equals("Year")) {
+                    try {
+                        metrics.put(header, Double.parseDouble(record.get(header)));
+                    } catch (NumberFormatException e) {
+                        metrics.put(header, 0.0);
+                    }
+                }
+            }
+        }
+        return metrics;
+    }
+
+    /**
+     * Get 3-statement model as HTML
+     */
+    public String get3StatementModelAsHtml(String company, int year) throws IOException {
+        Path modelPath = Paths.get(
+                System.getProperty("user.dir"),
+                outputBaseDir,
+                "statement_csvs",
+                company,
+                String.valueOf(year),
+                "3statement_model",
+                company + "_3statementmodel_" + year + ".csv"
+        );
+
+        if (!Files.exists(modelPath)) {
+            throw new FileNotFoundException("3-statement model not found for " + company + " " + year);
+        }
+
+        StringBuilder tableHtml = new StringBuilder();
+        tableHtml.append("<table class='model-table'>");
+
+        try (CSVParser parser = CSVParser.parse(modelPath,
+                StandardCharsets.UTF_8, CSVFormat.DEFAULT.withFirstRecordAsHeader())) {
+            // Add headers
             tableHtml.append("<thead><tr>");
-            for (String header : records.get(0)) {
+            for (String header : parser.getHeaderNames()) {
                 tableHtml.append("<th>").append(header).append("</th>");
             }
-            tableHtml.append("</tr></thead>");
-        }
+            tableHtml.append("</tr></thead><tbody>");
 
-        // Add data rows with styling based on depth
-        tableHtml.append("<tbody>");
-        for (String[] row : records.subList(1, records.size())) {
-            int depth = Integer.parseInt(row[1]); // Assuming depth is in second column
-            String backgroundColor = getBackgroundColor(statement, depth);
-            String textColor = depth < 3 ? "white" : "black";
-
-            tableHtml.append("<tr style='")
-                    .append(backgroundColor)
-                    .append("; color: ")
-                    .append(textColor)
-                    .append(";'>");
-
-            // Add indentation to API Key
-            String apiKey = "\u00A0".repeat(4 * depth) + row[0];
-            tableHtml.append("<td>").append(apiKey).append("</td>");
-
-            // Add remaining columns
-            for (int i = 1; i < row.length; i++) {
-                tableHtml.append("<td>").append(row[i]).append("</td>");
+            // Add data
+            for (CSVRecord record : parser) {
+                tableHtml.append("<tr>");
+                for (String value : record) {
+                    tableHtml.append("<td>").append(value).append("</td>");
+                }
+                tableHtml.append("</tr>");
             }
-            tableHtml.append("</tr>");
         }
         tableHtml.append("</tbody></table>");
 
-        // Return complete HTML document
         return String.format("""
             <html>
             <head>
-                <title>%s %s %d</title>
+                <title>%s 3-Statement Model %d</title>
                 <style>
                     body {
                         font-family: Arial, sans-serif;
@@ -233,39 +364,65 @@ public class ScriptsService {
                         border-radius: 5px;
                         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
                     }
-                    .financial-table {
-                        border-collapse: collapse;
+                    .model-table {
                         width: 100%%;
-                        margin: 20px 0;
+                        border-collapse: collapse;
+                        margin-top: 20px;
                     }
-                    .financial-table th, .financial-table td {
-                        padding: 12px 8px;
+                    .model-table th, .model-table td {
+                        padding: 12px;
                         border: 1px solid #ddd;
+                        text-align: right;
+                    }
+                    .model-table th {
+                        background-color: #f8f9fa;
                         text-align: left;
                     }
-                    .financial-table th {
-                        background-color: #f8f9fa;
+                    .section-header {
+                        background-color: #e9ecef;
                         font-weight: bold;
-                    }
-                    .financial-table tr:hover {
-                        opacity: 0.9;
                     }
                 </style>
             </head>
             <body>
                 <div class="container">
-                    <h1>%s %s %d</h1>
+                    <h1>%s 3-Statement Model %d</h1>
                     %s
                 </div>
             </body>
             </html>
             """,
-                company, statement, year,
-                company, statement, year,
+                company, year,
+                company, year,
                 tableHtml.toString()
         );
     }
 
+    /**
+     * Get 3-statement model as downloadable resource
+     */
+    public Resource get3StatementModelAsResource(String company, int year) throws IOException {
+        Path modelPath = Paths.get(
+                System.getProperty("user.dir"),
+                outputBaseDir,
+                "statement_csvs",
+                company,
+                String.valueOf(year),
+                "3statement_model",
+                company + "_3statementmodel_" + year + ".csv"
+        );
+
+        Resource resource = new UrlResource(modelPath.toUri());
+        if (resource.exists()) {
+            return resource;
+        } else {
+            throw new FileNotFoundException("3-statement model not found: " + modelPath);
+        }
+    }
+
+    /**
+     * Get structured file listing
+     */
     public Map<String, Map<Integer, List<String>>> getStructuredFileList() {
         Map<String, Map<Integer, List<String>>> structure = new HashMap<>();
         Path basePath = Paths.get(System.getProperty("user.dir"), outputBaseDir, "statement_csvs");
@@ -274,49 +431,20 @@ public class ScriptsService {
             paths.filter(Files::isRegularFile)
                     .forEach(path -> {
                         Path relativePath = basePath.relativize(path);
-                        String company = relativePath.getName(0).toString();
-                        int year = Integer.parseInt(relativePath.getName(1).toString());
-                        String fileName = relativePath.getFileName().toString();
+                        if (relativePath.getNameCount() >= 2) {
+                            String company = relativePath.getName(0).toString();
+                            int year = Integer.parseInt(relativePath.getName(1).toString());
+                            String fileName = relativePath.getFileName().toString();
 
-                        structure.computeIfAbsent(company, k -> new HashMap<>())
-                                .computeIfAbsent(year, k -> new ArrayList<>())
-                                .add(fileName);
+                            structure.computeIfAbsent(company, k -> new HashMap<>())
+                                    .computeIfAbsent(year, k -> new ArrayList<>())
+                                    .add(fileName);
+                        }
                     });
         } catch (IOException e) {
             e.printStackTrace();
         }
 
         return structure;
-    }
-
-
-    private String getBackgroundColor(String statementType, int depth) {
-        int r, g, b;
-        int increment = 40;
-
-        switch (statementType.toLowerCase()) {
-            case "balance":
-                // Dark blue base
-                r = Math.min(1 + (increment * depth), 255);
-                g = Math.min(5 + (increment * depth), 255);
-                b = Math.min(18 + (increment * depth), 255);
-                break;
-            case "cash_flow":
-                // Dark green base
-                r = Math.min(0 + (increment * depth), 255);
-                g = Math.min(43 + (increment * depth), 255);
-                b = Math.min(0 + (increment * depth), 255);
-                break;
-            case "income":
-                // Dark yellow/brown base
-                r = Math.min(58 + (increment * depth), 255);
-                g = Math.min(47 + (increment * depth), 255);
-                b = Math.min(0 + (increment * depth), 255);
-                break;
-            default:
-                return "background-color: #d0e7ff";
-        }
-
-        return String.format("background-color: rgb(%d, %d, %d)", r, g, b);
     }
 }
