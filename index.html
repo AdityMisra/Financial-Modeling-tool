@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Model UI</title>
+    <style>
+        body {
+            display: flex;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        .menu {
+            width: 20%;
+            background-color: #f4f4f4;
+            border-right: 1px solid #ddd;
+            height: 100vh;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        .menu-item {
+            padding: 10px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            margin-bottom: 5px;
+            text-align: center;
+        }
+
+        .menu-item:hover {
+            background-color: #e0e0e0;
+            border: 1px solid #ccc;
+        }
+
+        .menu-item.active {
+            background-color: #007BFF;
+            color: #fff;
+        }
+
+        .content {
+            width: 80%;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .btn {
+            padding: 10px 15px;
+            background-color: #007BFF;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .btn:hover {
+            background-color: #0056b3;
+        }
+
+        .result {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="menu">
+        <div class="menu-item" onclick="loadContent('option1')">Option 1</div>
+        <div class="menu-item" onclick="loadContent('option2')">Option 2</div>
+        <div class="menu-item" onclick="loadContent('option3')">Option 3</div>
+    </div>
+
+    <div class="content" id="content-area">
+        <h2>Welcome to the Financial Model UI</h2>
+        <p>Select an option from the menu to get started.</p>
+    </div>
+
+    <script>
+        function loadContent(option) {
+            const contentArea = document.getElementById('content-area');
+            const menuItems = document.querySelectorAll('.menu-item');
+            menuItems.forEach(item => item.classList.remove('active'));
+
+            // Set active class
+            const activeItem = Array.from(menuItems).find(item => item.textContent === option);
+            if (activeItem) activeItem.classList.add('active');
+
+            // Load content dynamically
+            if (option === 'option1') {
+                contentArea.innerHTML = `
+                    <h2>Option 1</h2>
+                    <div class="input-group">
+                        <label for="input1">Input 1:</label>
+                        <input type="text" id="input1">
+                    </div>
+                    <button class="btn" onclick="executeAction('option1')">Submit</button>
+                    <div class="result" id="result1"></div>
+                `;
+            } else if (option === 'option2') {
+                contentArea.innerHTML = `
+                    <h2>Option 2</h2>
+                    <div class="input-group">
+                        <label for="input2">Input 2:</label>
+                        <input type="text" id="input2">
+                    </div>
+                    <button class="btn" onclick="executeAction('option2')">Submit</button>
+                    <div class="result" id="result2"></div>
+                `;
+            } else if (option === 'option3') {
+                contentArea.innerHTML = `
+                    <h2>Option 3</h2>
+                    <div class="input-group">
+                        <label for="input3">Input 3:</label>
+                        <input type="text" id="input3">
+                    </div>
+                    <button class="btn" onclick="executeAction('option3')">Submit</button>
+                    <div class="result" id="result3"></div>
+                `;
+            }
+        }
+
+        function executeAction(option) {
+            let input;
+            if (option === 'option1') {
+                input = document.getElementById('input1').value;
+            } else if (option === 'option2') {
+                input = document.getElementById('input2').value;
+            } else if (option === 'option3') {
+                input = document.getElementById('input3').value;
+            }
+
+            // Simulating API call
+            const resultDiv = document.getElementById(`result${option.slice(-1)}`);
+            resultDiv.innerHTML = `<p>Processing ${option} with input: ${input}</p>`;
+            setTimeout(() => {
+                resultDiv.innerHTML += `<p>Result for ${option}: ${input.toUpperCase()}</p>`;
+            }, 1000);
+        }
+    </script>
+</body>
+</html>
