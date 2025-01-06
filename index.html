@@ -15,60 +15,68 @@
 
         .header {
             width: 100%;
-            background-color: #007BFF;
-            color: #fff;
-            padding: 10px;
+            background-color: #2C3E50;
+            color: #ECF0F1;
+            padding: 15px;
             text-align: center;
             font-size: 1.5em;
+            font-weight: bold;
         }
 
         .footer {
             width: 100%;
-            background-color: #f4f4f4;
+            background-color: #2C3E50;
+            color: #ECF0F1;
             text-align: center;
             padding: 10px;
             font-size: 0.9em;
-            color: #555;
         }
 
         .main-container {
             display: flex;
             flex: 1;
+            background-color: #ECF0F1;
         }
 
         .menu {
             width: 20%;
-            background-color: #d3d3d3;
-            border-right: 2px solid #000;
+            background-color: #BDC3C7;
+            border-right: 3px solid #34495E;
             height: 100%;
-            padding: 10px;
+            padding: 15px;
             box-sizing: border-box;
         }
 
         .menu-item {
             padding: 10px;
             cursor: pointer;
-            border: 2px solid transparent;
-            margin-bottom: 5px;
+            margin-bottom: 10px;
             text-align: center;
-            background-color: #f9f9f9;
+            font-size: 1em;
+            color: #2C3E50;
+            background-color: #ECF0F1;
+            border: 2px solid transparent;
+            border-radius: 5px;
         }
 
         .menu-item:hover {
-            background-color: #e0e0e0;
-            border: 2px solid #555;
+            background-color: #95A5A6;
+            color: #ECF0F1;
+            border: 2px solid #34495E;
         }
 
         .menu-item.active {
-            background-color: #007BFF;
-            color: #fff;
+            background-color: #34495E;
+            color: #ECF0F1;
+            border: 2px solid #2C3E50;
         }
 
         .content {
             width: 80%;
             padding: 20px;
             box-sizing: border-box;
-            background-color: #fff;
+            background-color: #FFFFFF;
+            border-left: 3px solid #BDC3C7;
         }
 
         .input-group {
@@ -78,26 +86,28 @@
         .input-group label {
             display: block;
             margin-bottom: 5px;
+            font-weight: bold;
         }
 
         .input-group input {
             width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
+            padding: 10px;
+            border: 1px solid #BDC3C7;
             border-radius: 4px;
         }
 
         .btn {
             padding: 10px 15px;
-            background-color: #007BFF;
-            color: #fff;
+            background-color: #34495E;
+            color: #ECF0F1;
             border: none;
-            border-radius: 4px;
+            border-radius: 5px;
             cursor: pointer;
+            font-size: 1em;
         }
 
         .btn:hover {
-            background-color: #0056b3;
+            background-color: #2C3E50;
         }
 
         .result {
@@ -106,10 +116,10 @@
 
         .html-display {
             margin-top: 20px;
-            border: 1px solid #ddd;
-            padding: 10px;
-            border-radius: 4px;
-            background-color: #f9f9f9;
+            border: 1px solid #BDC3C7;
+            padding: 15px;
+            border-radius: 5px;
+            background-color: #F4F6F7;
             overflow-x: auto;
         }
 
@@ -123,10 +133,10 @@
         }
 
         .folder-structure {
-            border: 1px solid #ddd;
-            padding: 10px;
-            border-radius: 4px;
-            background-color: #f9f9f9;
+            border: 1px solid #BDC3C7;
+            padding: 15px;
+            border-radius: 5px;
+            background-color: #F4F6F7;
         }
     </style>
 </head>
@@ -160,167 +170,7 @@
             if (activeItem) activeItem.classList.add('active');
 
             // Load content dynamically
-            if (option === 'Fetch Data') {
-                contentArea.innerHTML = `
-                    <h2>Fetch Data</h2>
-                    <div class="split-view">
-                        <div class="top-section">
-                            <h3>Input Data</h3>
-                            <div class="input-group">
-                                <label for="cik">CIK:</label>
-                                <input type="text" id="cik">
-                            </div>
-                            <div class="input-group">
-                                <label for="year">Year:</label>
-                                <input type="text" id="year">
-                            </div>
-                            <button class="btn" onclick="fetchNewData()">Fetch New Data</button>
-                            <div class="result" id="fetch-result"></div>
-                        </div>
-
-                        <div class="folder-section">
-                            <h3>File Structure</h3>
-                            <button class="btn" onclick="fetchFolderStructure()">Fetch Existing Data</button>
-                            <div class="folder-structure" id="folder-structure">
-                                <p>No data fetched yet.</p>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            } else if (option === 'Display Existing Data') {
-                contentArea.innerHTML = `
-                    <h2>Display Existing Data</h2>
-                    <div class="input-group">
-                        <label for="cik">CIK:</label>
-                        <input type="text" id="cik">
-                    </div>
-                    <div class="input-group">
-                        <label for="year">Year:</label>
-                        <input type="text" id="year">
-                    </div>
-                    <button class="btn" onclick="fetchHtmlData()">Generate HTML</button>
-                    <div class="html-display" id="html-result">
-                        <p>No data generated yet.</p>
-                    </div>
-                `;
-            } else if (option === 'Calculate Metrics') {
-                contentArea.innerHTML = `
-                    <h2>Calculate Metrics</h2>
-                    <div class="input-group">
-                        <label for="cik">CIK:</label>
-                        <input type="text" id="cik">
-                    </div>
-                    <div class="input-group">
-                        <label for="year-start">Year Start:</label>
-                        <input type="text" id="year-start">
-                    </div>
-                    <div class="input-group">
-                        <label for="year-end">Year End:</label>
-                        <input type="text" id="year-end">
-                    </div>
-                    <button class="btn" onclick="fetchMetricsData()">Generate Metrics</button>
-                    <div class="html-display" id="metrics-result">
-                        <p>No data generated yet.</p>
-                    </div>
-                `;
-            } else if (option === 'Monte Carlo Simulations') {
-                contentArea.innerHTML = `
-                    <h2>Monte Carlo Simulations</h2>
-                    <div class="input-group">
-                        <label for="cik">CIK:</label>
-                        <input type="text" id="cik">
-                    </div>
-                    <div class="input-group">
-                        <label for="year-start">Start Year:</label>
-                        <input type="text" id="year-start">
-                    </div>
-                    <div class="input-group">
-                        <label for="year-end">End Year:</label>
-                        <input type="text" id="year-end">
-                    </div>
-                    <div class="input-group">
-                        <label for="simulations">No. of Simulations:</label>
-                        <input type="number" id="simulations">
-                    </div>
-                    <div class="input-group">
-                        <label for="years">No. of Years:</label>
-                        <input type="number" id="years">
-                    </div>
-                    <div class="input-group">
-                        <label for="tax-rate">Tax Rate (%):</label>
-                        <input type="number" step="0.01" id="tax-rate">
-                    </div>
-                    <button class="btn" onclick="fetchMonteCarloData()">Run Simulations</button>
-                    <div class="html-display" id="montecarlo-result">
-                        <p>No data generated yet.</p>
-                    </div>
-                `;
-            }
-        }
-
-        function fetchMonteCarloData() {
-            const cik = document.getElementById('cik').value;
-            const yearStart = document.getElementById('year-start').value;
-            const yearEnd = document.getElementById('year-end').value;
-            const simulations = document.getElementById('simulations').value;
-            const years = document.getElementById('years').value;
-            const taxRate = document.getElementById('tax-rate').value;
-
-            fetch('RestURL:/montecarlo', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ CIK: cik, YearStart: yearStart, YearEnd: yearEnd, Simulations: simulations, Years: years, TaxRate: taxRate })
-            })
-            .then(response => response.text())
-            .then(data => {
-                const monteCarloResult = document.getElementById('montecarlo-result');
-                monteCarloResult.innerHTML = data;
-
-                const downloadHtmlBtn = document.createElement('button');
-                downloadHtmlBtn.textContent = 'Download HTML';
-                downloadHtmlBtn.className = 'btn';
-                downloadHtmlBtn.onclick = () => downloadFile(data, 'montecarlo.html', 'text/html');
-
-                const downloadCsvBtn = document.createElement('button');
-                downloadCsvBtn.textContent = 'Download CSV';
-                downloadCsvBtn.className = 'btn';
-                downloadCsvBtn.onclick = () => downloadFile(htmlToCsv(data), 'montecarlo.csv', 'text/csv');
-
-                monteCarloResult.appendChild(downloadHtmlBtn);
-                monteCarloResult.appendChild(downloadCsvBtn);
-            })
-            .catch(error => {
-                document.getElementById('montecarlo-result').innerHTML = `<p>Error: ${error.message}</p>`;
-            });
-        }
-
-        function downloadFile(content, filename, contentType) {
-            const a = document.createElement('a');
-            const blob = new Blob([content], { type: contentType });
-            const url = URL.createObjectURL(blob);
-            a.href = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
-
-        function htmlToCsv(html) {
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
-            const rows = doc.querySelectorAll('table tr');
-            let csv = '';
-
-            rows.forEach(row => {
-                const cols = row.querySelectorAll('td, th');
-                const rowCsv = Array.from(cols).map(col => col.textContent.trim()).join(',');
-                csv += rowCsv + '\n';
-            });
-
-            return csv;
+            contentArea.innerHTML = `<h2>${option}</h2><p>Content for ${option} will appear here.</p>`;
         }
     </script>
 </body>
