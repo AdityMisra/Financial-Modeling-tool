@@ -14,6 +14,33 @@ HEADERS = {
     "Host": "data.sec.gov"
 }
 
+def process_multiple_companies(hierarchy_df_balance_sheet: pd.DataFrame,
+                               hierarchy_df_cash_flow: pd.DataFrame,
+                               hierarchy_df_income_stmt: pd.DataFrame,
+                               ciks: List[str],  # Now it's a list of CIKs, not a dictionary of names and CIKs
+                               years: List[int]) -> Dict[str, pd.DataFrame]:
+    """
+    Process multiple companies and return their financial statements.
+    """
+    results = {}
+    for cik in ciks:  # Iterate directly over the list of CIKs
+        print(f"Processing CIK: {cik}...")
+
+        # Process balance sheet
+        bs_df = process_hierarchy(hierarchy_df_balance_sheet, cik, years)
+        results[f"{cik}_balance"] = bs_df
+
+        # Process cash flow
+        cf_df = process_hierarchy(hierarchy_df_cash_flow, cik, years)
+        results[f"{cik}_cash_flow"] = cf_df
+
+        # Process income statement
+        is_df = process_hierarchy(hierarchy_df_income_stmt, cik, years)
+        results[f"{cik}_income"] = is_df
+
+    return results
+
+
 def process_hierarchy_with_depth(data: pd.DataFrame, definitions: List[str]) -> pd.DataFrame:
     """
     Processes the hierarchy using the existing 'depth' column.
@@ -71,81 +98,88 @@ def process_hierarchy(hierarchy_df: pd.DataFrame, cik: str, years: List[int]) ->
 
     return pd.DataFrame(valid_entries)
 
-def save_to_csv(df: pd.DataFrame, company_name: str, year: int, statement_type: str, output_dir: str):
+def save_to_csv(df: pd.DataFrame, cik: str, year: int, statement_type: str, output_dir: str):
     """
     Save data to CSV with the structure:
-    statement_csvs/Company/Year/Company_statement_year.csv
+    statement_csvs/CIK/Year/CIK_statement_year.csv
     """
     # Create directory structure
-    company_dir = os.path.join(output_dir, "statement_csvs", company_name, str(year))
-    os.makedirs(company_dir, exist_ok=True)
+    cik_dir = os.path.join(output_dir, "statement_csvs", cik, str(year))
+    os.makedirs(cik_dir, exist_ok=True)
 
     # Save CSV
-    csv_filename = f"{company_name}_{statement_type}_{year}.csv"
-    csv_path = os.path.join(company_dir, csv_filename)
+    csv_filename = f"{cik}_{statement_type}_{year}.csv"
+    csv_path = os.path.join(cik_dir, csv_filename)
     df.to_csv(csv_path, index=False)
     print(f"Saved {csv_filename}")
 
 
 def main():
-    if len(sys.argv) != 5:
-        print("Usage: python generate_3statementmodel.py <company> <year> <input_dir> <output_dir>")
-        sys.exit(1)
-
-    companies = json.loads(sys.argv[1])
-    years = json.loads(sys.argv[2])
-    print(f"Received companies: {companies}")
-    print(f"Received years: {years}")
-
+    # Load the dataset
     try:
         file_path = sys.argv[3]
         data = pd.read_csv(file_path)
         OUTPUT_DIR = sys.argv[4]
-
-        # Define statement definitions
-        balance_sheet_definitions = ['104000 - Statement - Statement of Financial Position, Classified']
-        cash_flow_definitions = [
-            '152200 - Statement - Statement of Cash Flows',
-            '160000 - Statement - Statement of Cash Flows, Deposit Based Operations',
-            '164000 - Statement - Statement of Cash Flows, Insurance Based Operations',
-            '168400 - Statement - Statement of Cash Flows, Securities Based Operations',
-            '172600 - Statement - Statement of Cash Flows, Direct Method Operating Activities'
-        ]
-        income_stmt_definitions = ['124000 - Statement - Statement of Income (Including Gross Margin)']
-
-        # Process hierarchies
-        hierarchy_df_balance_sheet = process_hierarchy_with_depth(data, balance_sheet_definitions)
-        hierarchy_df_cash_flow = process_hierarchy_with_depth(data, cash_flow_definitions)
-        hierarchy_df_income_stmt = process_hierarchy_with_depth(data, income_stmt_definitions)
-
-        # Process each company
-        for company_name, cik in companies.items():
-            print(f"Processing {company_name} (CIK: {cik})...")
-
-            # Get data for all years at once
-            bs_df = process_hierarchy(hierarchy_df_balance_sheet, cik, years)
-            cf_df = process_hierarchy(hierarchy_df_cash_flow, cik, years)
-            is_df = process_hierarchy(hierarchy_df_income_stmt, cik, years)
-
-            # Save files for each year separately
-            for year in years:
-                print(f"Saving files for year {year}...")
-
-                # Create year-specific DataFrames
-                year_bs = bs_df[['API Key', 'depth', str(year)]]
-                year_cf = cf_df[['API Key', 'depth', str(year)]]
-                year_is = is_df[['API Key', 'depth', str(year)]]
-
-                # Save to respective directories
-                save_to_csv(year_bs, company_name, year, "balance", OUTPUT_DIR)
-                save_to_csv(year_cf, company_name, year, "cash_flow", OUTPUT_DIR)
-                save_to_csv(year_is, company_name, year, "income", OUTPUT_DIR)
-
+        output_directory_csv = os.path.join(OUTPUT_DIR, "csvs")
+        output_directory_html = os.path.join(OUTPUT_DIR, "html")
+    except FileNotFoundError:
+        print(f"Error: Could not find file {file_path}")
+        return
     except Exception as e:
-        print(f"Error processing data: {e}")
-        import traceback
-        traceback.print_exc()
-        sys.exit(1)
+        print(f"Error loading data: {e}")
+        return
+
+    # Parse the new input format
+    try:
+        input_data = json.loads(sys.argv[1])  # Parse the JSON string passed as an argument
+
+        # Check if input data is a dictionary
+        if isinstance(input_data, dict):
+            ciks = input_data.get("ciks", [])
+            years = input_data.get("years", [])
+        elif isinstance(input_data, list):
+            # If the input is a list, treat it as CIKs and assume years are passed in the second argument
+            ciks = input_data
+            years = json.loads(sys.argv[2])  # Assume years are passed as another argument
+        else:
+            print("Error: Invalid input format. Expected a dictionary or list.")
+            return
+    except Exception as e:
+        print(f"Error parsing input data: {e}")
+        return
+
+    print(f"Received CIKs: {ciks}")
+    print(f"Received years: {years}")
+
+    # Define statement definitions
+    balance_sheet_definitions = ['104000 - Statement - Statement of Financial Position, Classified']
+    cash_flow_definitions = [
+        '152200 - Statement - Statement of Cash Flows',
+        '160000 - Statement - Statement of Cash Flows, Deposit Based Operations',
+        '164000 - Statement - Statement of Cash Flows, Insurance Based Operations',
+        '168400 - Statement - Statement of Cash Flows, Securities Based Operations',
+        '172600 - Statement - Statement of Cash Flows, Direct Method Operating Activities'
+    ]
+    income_stmt_definitions = ['124000 - Statement - Statement of Income (Including Gross Margin)']
+
+    # Process hierarchies
+    hierarchy_df_balance_sheet = process_hierarchy_with_depth(data, balance_sheet_definitions)
+    hierarchy_df_cash_flow = process_hierarchy_with_depth(data, cash_flow_definitions)
+    hierarchy_df_income_stmt = process_hierarchy_with_depth(data, income_stmt_definitions)
+
+    # Process companies (now passing CIKs directly)
+    results = process_multiple_companies(hierarchy_df_balance_sheet,
+                                         hierarchy_df_cash_flow,
+                                         hierarchy_df_income_stmt,
+                                         ciks,
+                                         years)
+
+    for cik_statement, df in results.items():
+        # Extract the cik, statement type, and year from the key
+        cik, statement_type = cik_statement.split("_", 1)
+        # You may want to specify the year explicitly or iterate over all years if needed
+        for year in years:
+            save_to_csv(df, cik, year, statement_type, output_dir=output_directory_csv)
 
 if __name__ == "__main__":
     main()

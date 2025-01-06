@@ -141,7 +141,7 @@ def main():
         taxonomy_df = pd.read_csv(taxonomy_path)[['name', 'parent', 'depth', 'weight']]
 
         # Load financial statements
-        company_dir = os.path.join(input_dir, "statement_csvs", company, str(year))
+        company_dir = os.path.join(input_dir, "csvs", "statement_csvs", company, str(year))
         balance_df = pd.read_csv(os.path.join(company_dir, f"{company}_balance_{year}.csv"))
         income_df = pd.read_csv(os.path.join(company_dir, f"{company}_income_{year}.csv"))
         cashflow_df = pd.read_csv(os.path.join(company_dir, f"{company}_cash_flow_{year}.csv"))
@@ -162,7 +162,7 @@ def main():
 
         # Convert to DataFrame and save
         results_df = pd.DataFrame([results])
-        output_dir = os.path.join(input_dir, "statement_csvs", company, str(year), "3statement_model")
+        output_dir = os.path.join(input_dir, "csvs", "statement_csvs", company, str(year), "3statement_model")
         os.makedirs(output_dir, exist_ok=True)
 
         output_file = os.path.join(output_dir, f"{company}_3statementmodel_{year}.csv")

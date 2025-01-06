@@ -1,24 +1,24 @@
 package org.example.vo;
 
 public class ThreeStatementModelRequest {
-    private String company;
+    private String cik;
     private Integer year;
 
     // Constructors
     public ThreeStatementModelRequest() {}
 
-    public ThreeStatementModelRequest(String company, Integer year) {
-        this.company = company;
+    public ThreeStatementModelRequest(String cik, Integer year) {
+        this.cik = cik;
         this.year = year;
     }
 
     // Getters and Setters
-    public String getCompany() {
-        return company;
+    public String getCik() {
+        return cik;
     }
 
-    public void setCompany(String company) {
-        this.company = company;
+    public void setCik(String cik) {
+        this.cik = cik;
     }
 
     public Integer getYear() {

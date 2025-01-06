@@ -1,9 +1,13 @@
 org/example/Main.class
+org/example/vo/MetricsCalculationRequest.class
 org/example/bo/ScriptsService.class
 org/example/vo/extractTableResponse.class
 org/example/dao/ScriptsDAO.class
 SwaggerConfig.class
 org/example/vo/extractTableRequest.class
 org/example/vo/ThreeStatementModelRequest.class
+org/example/bo/CompanyInfoService.class
 org/example/controller/ScriptsController.class
+org/example/vo/MetricsCalculationResponse.class
 org/example/vo/ThreeStatementModelResponse.class
+org/example/bo/ScriptsService$MissingDataInfo.class

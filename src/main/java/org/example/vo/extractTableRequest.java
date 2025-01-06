@@ -4,16 +4,25 @@ import java.util.List;
 import java.util.Map;
 
 public class extractTableRequest {
-    private Map<String, String> companies;
+    private List<String> ciks;  // Changed from Map<String, String> companies
     private List<Integer> years;
 
-    // Getters and setters
-    public Map<String, String> getCompanies() {
-        return companies;
+    // Default constructor
+    public extractTableRequest() {}
+
+    // Constructor
+    public extractTableRequest(List<String> ciks, List<Integer> years) {
+        this.ciks = ciks;
+        this.years = years;
     }
 
-    public void setCompanies(Map<String, String> companies) {
-        this.companies = companies;
+    // Getters and setters
+    public List<String> getCiks() {
+        return ciks;
+    }
+
+    public void setCiks(List<String> ciks) {
+        this.ciks = ciks;
     }
 
     public List<Integer> getYears() {
