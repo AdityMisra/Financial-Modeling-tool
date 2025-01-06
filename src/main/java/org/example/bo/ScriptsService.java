@@ -2,6 +2,7 @@ package org.example.bo;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.example.vo.MetricsCalculationResponse;
+import org.example.vo.MonteCarloResponse;
 import org.example.vo.extractTableResponse;
 import org.example.vo.ThreeStatementModelResponse;
 import org.springframework.beans.factory.annotation.Value;
@@ -613,5 +614,109 @@ public class ScriptsService {
                     null
             );
         }
+    }
+
+    public MonteCarloResponse runMonteCarloSimulation(String cik, Integer numSimulations,
+                                                      Integer simulationYears, Double taxRate) throws IOException, InterruptedException {
+
+        try {
+            // Set up paths
+            String scriptPath = Paths.get(System.getProperty("user.dir"),
+                    "src", "main", "resources", "PythonScripts", "monte_carlo_simulations.py").toString();
+
+            String baseDir = Paths.get(System.getProperty("user.dir"), outputBaseDir).toString();
+
+            // Verify metrics file exists
+            Path metricsPath = Paths.get(baseDir,"csvs", "statement_csvs", cik, "metrics",
+                    cik + "_metrics.csv");
+            if (!Files.exists(metricsPath)) {
+                return new MonteCarloResponse(
+                        "error",
+                        "Metrics file not found. Please calculate metrics first.",
+                        null,
+                        null
+                );
+            }
+
+            // Execute Python script
+            String[] command = {
+                    "python3",
+                    scriptPath,
+                    cik,
+                    numSimulations.toString(),
+                    simulationYears.toString(),
+                    taxRate.toString(),
+                    baseDir
+            };
+
+            System.out.println("Executing Monte Carlo simulation command: " + String.join(" ", command));
+            Process process = executeScript(command);
+
+            // Check for simulation results
+            String simulationPath = Paths.get(outputBaseDir, "csvs","statement_csvs", cik,
+                    "simulations", cik + "_monte_carlo_results.csv").toString();
+
+            Path simFilePath = Paths.get(System.getProperty("user.dir"), simulationPath);
+
+            if (Files.exists(simFilePath)) {
+                // Read simulation results
+                List<Map<String, Object>> results = readSimulationResults(simFilePath);
+
+                return new MonteCarloResponse(
+                        "success",
+                        String.format("Successfully generated Monte Carlo simulation with %d simulations for %d years",
+                                numSimulations, simulationYears),
+                        simulationPath,
+                        results
+                );
+            } else {
+                return new MonteCarloResponse(
+                        "error",
+                        "Simulation failed: Output file not generated",
+                        null,
+                        null
+                );
+            }
+
+        } catch (Exception e) {
+            String errorMessage = String.format("Error running Monte Carlo simulation for CIK %s: %s",
+                    cik, e.getMessage());
+            System.err.println(errorMessage);
+            e.printStackTrace();
+
+            return new MonteCarloResponse(
+                    "error",
+                    errorMessage,
+                    null,
+                    null
+            );
+        }
+    }
+
+    private List<Map<String, Object>> readSimulationResults(Path filePath) throws IOException {
+        List<Map<String, Object>> results = new ArrayList<>();
+        try (Reader reader = Files.newBufferedReader(filePath);
+             CSVParser csvParser = CSVParser.parse(reader, CSVFormat.DEFAULT.withFirstRecordAsHeader())) {
+
+            for (CSVRecord record : csvParser) {
+                Map<String, Object> row = new HashMap<>();
+                for (String header : csvParser.getHeaderNames()) {
+                    String value = record.get(header);
+                    try {
+                        if (header.equals("Year") || header.equals("Simulation")) {
+                            row.put(header, Integer.parseInt(value));
+                        } else if (header.equals("CIK")) {
+                            row.put(header, value);
+                        } else {
+                            row.put(header, Double.parseDouble(value));
+                        }
+                    } catch (NumberFormatException e) {
+                        row.put(header, value);
+                    }
+                }
+                results.add(row);
+            }
+        }
+        return results;
     }
 }

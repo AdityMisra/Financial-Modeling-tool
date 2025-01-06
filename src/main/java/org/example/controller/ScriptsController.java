@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
@@ -222,6 +223,84 @@ public class ScriptsController {
                         .contentType(MediaType.parseMediaType("text/csv"))
                         .header(HttpHeaders.CONTENT_DISPOSITION,
                                 "attachment; filename=\"" + cik + "_metrics.csv\"")
+                        .body(resource);
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (IOException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @PostMapping("/monte-carlo-simulation")
+    public ResponseEntity<MonteCarloResponse> runMonteCarloSimulation(@RequestBody MonteCarloRequest request) {
+        try {
+            // First check if metrics exist
+            String metricsPath = Paths.get(outputBaseDir, "csvs", "statement_csvs",
+                    request.getCik(), "metrics", request.getCik() + "_metrics.csv").toString();
+
+            if (!Files.exists(Paths.get(metricsPath))) {
+                return ResponseEntity.badRequest().body(
+                        new MonteCarloResponse(
+                                "error",
+                                "Metrics file not found. Please calculate metrics first.",
+                                null,
+                                null
+                        )
+                );
+            }
+
+            return ResponseEntity.ok(scriptsService.runMonteCarloSimulation(
+                    request.getCik(),
+                    request.getNumSimulations(),
+                    request.getSimulationYears(),
+                    request.getTaxRate()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(
+                    new MonteCarloResponse(
+                            "error",
+                            e.getMessage(),
+                            null,
+                            null
+                    )
+            );
+        }
+    }
+
+    @GetMapping("/view/simulation/{cik}")
+    public ResponseEntity<Resource> viewSimulationResults(@PathVariable String cik) {
+        try {
+            Path filePath = Paths.get(System.getProperty("user.dir"), outputBaseDir,
+                    "statement_csvs", cik, "simulations", cik + "_monte_carlo_results.html");
+
+            Resource resource = new UrlResource(filePath.toUri());
+
+            if (resource.exists()) {
+                return ResponseEntity.ok()
+                        .contentType(MediaType.TEXT_HTML)
+                        .body(resource);
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (IOException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @GetMapping("/download/simulation/{cik}")
+    public ResponseEntity<Resource> downloadSimulationResults(@PathVariable String cik) {
+        try {
+            Path filePath = Paths.get(System.getProperty("user.dir"), outputBaseDir,
+                    "statement_csvs", cik, "simulations", cik + "_monte_carlo_results.csv");
+
+            Resource resource = new UrlResource(filePath.toUri());
+
+            if (resource.exists()) {
+                return ResponseEntity.ok()
+                        .contentType(MediaType.parseMediaType("text/csv"))
+                        .header(HttpHeaders.CONTENT_DISPOSITION,
+                                "attachment; filename=\"" + cik + "_monte_carlo_results.csv\"")
                         .body(resource);
             } else {
                 return ResponseEntity.notFound().build();
