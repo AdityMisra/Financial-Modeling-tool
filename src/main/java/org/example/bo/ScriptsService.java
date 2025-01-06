@@ -69,7 +69,7 @@ public class ScriptsService {
             String outputPath = Paths.get(System.getProperty("user.dir"), outputBaseDir).toString();
 
             // Create directory structure
-            Files.createDirectories(Paths.get(outputPath, "statement_csvs"));
+            Files.createDirectories(Paths.get(outputPath, "csvs", "statement_csvs"));
 
             String[] command = {"python3", scriptPath, companiesArg, yearsArg, gaapTaxonomy, outputPath};
             System.out.println("Executing command: " + String.join(" ", command));
@@ -322,6 +322,141 @@ public class ScriptsService {
         return metrics;
     }
 
+
+    public String generateHtml(String company, String statement, int year) throws IOException {
+        String csvContent = getCsvContent(company, statement, year);
+
+        // Parse CSV content
+        List<String[]> records = new ArrayList<>();
+        try (CSVParser parser = CSVParser.parse(csvContent, CSVFormat.DEFAULT.withHeader())) {
+            for (CSVRecord record : parser) {
+                String[] row = new String[record.size()];
+                for (int i = 0; i < record.size(); i++) {
+                    row[i] = record.get(i);
+                }
+                records.add(row);
+            }
+        }
+
+        // Generate styled HTML table
+        StringBuilder tableHtml = new StringBuilder();
+        tableHtml.append("<table class='financial-table'>");
+
+        // Add headers
+        if (!records.isEmpty()) {
+            tableHtml.append("<thead><tr>");
+            for (String header : records.get(0)) {
+                tableHtml.append("<th>").append(header).append("</th>");
+            }
+            tableHtml.append("</tr></thead>");
+        }
+
+        // Add data rows with styling based on depth
+        tableHtml.append("<tbody>");
+        for (String[] row : records.subList(1, records.size())) {
+            int depth = Integer.parseInt(row[1]); // Assuming depth is in second column
+            String backgroundColor = getBackgroundColor(statement, depth);
+            String textColor = depth < 3 ? "white" : "black";
+
+            tableHtml.append("<tr style='")
+                    .append(backgroundColor)
+                    .append("; color: ")
+                    .append(textColor)
+                    .append(";'>");
+
+            // Add indentation to API Key
+            String apiKey = "\u00A0".repeat(4 * depth) + row[0];
+            tableHtml.append("<td>").append(apiKey).append("</td>");
+
+            // Add remaining columns
+            for (int i = 1; i < row.length; i++) {
+                tableHtml.append("<td>").append(row[i]).append("</td>");
+            }
+            tableHtml.append("</tr>");
+        }
+        tableHtml.append("</tbody></table>");
+
+        // Return complete HTML document
+        return String.format("""
+            <html>
+            <head>
+                <title>%s %s %d</title>
+                <style>
+                    body {
+                        font-family: Arial, sans-serif;
+                        margin: 20px;
+                        background-color: #f5f5f5;
+                    }
+                    .container {
+                        background-color: white;
+                        padding: 20px;
+                        border-radius: 5px;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                    }
+                    .financial-table {
+                        border-collapse: collapse;
+                        width: 100%%;
+                        margin: 20px 0;
+                    }
+                    .financial-table th, .financial-table td {
+                        padding: 12px 8px;
+                        border: 1px solid #ddd;
+                        text-align: left;
+                    }
+                    .financial-table th {
+                        background-color: #f8f9fa;
+                        font-weight: bold;
+                    }
+                    .financial-table tr:hover {
+                        opacity: 0.9;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h1>%s %s %d</h1>
+                    %s
+                </div>
+            </body>
+            </html>
+            """,
+                company, statement, year,
+                company, statement, year,
+                tableHtml.toString()
+        );
+    }
+
+    private String getBackgroundColor(String statementType, int depth) {
+        int r, g, b;
+        int increment = 40;
+
+        switch (statementType.toLowerCase()) {
+            case "balance":
+                // Dark blue base
+                r = Math.min(1 + (increment * depth), 255);
+                g = Math.min(5 + (increment * depth), 255);
+                b = Math.min(18 + (increment * depth), 255);
+                break;
+            case "cash_flow":
+                // Dark green base
+                r = Math.min(0 + (increment * depth), 255);
+                g = Math.min(43 + (increment * depth), 255);
+                b = Math.min(0 + (increment * depth), 255);
+                break;
+            case "income":
+                // Dark yellow/brown base
+                r = Math.min(58 + (increment * depth), 255);
+                g = Math.min(47 + (increment * depth), 255);
+                b = Math.min(0 + (increment * depth), 255);
+                break;
+            default:
+                return "background-color: #d0e7ff";
+        }
+
+        return String.format("background-color: rgb(%d, %d, %d)", r, g, b);
+    }
+
+
     /**
      * Get 3-statement model as HTML
      */
@@ -445,28 +580,47 @@ public class ScriptsService {
      */
     public Map<String, Map<Integer, List<String>>> getStructuredFileList() {
         Map<String, Map<Integer, List<String>>> structure = new HashMap<>();
-        Path basePath = Paths.get(System.getProperty("user.dir"), outputBaseDir,"csvs", "statement_csvs");
+
+        // Constructing the base path relative to the outputBaseDir
+        Path basePath = Paths.get(outputBaseDir, "csvs", "statement_csvs");
+
+        // Check if the directory exists
+        if (!Files.exists(basePath)) {
+            throw new RuntimeException("Directory does not exist: " + basePath.toString());
+        }
 
         try (Stream<Path> paths = Files.walk(basePath)) {
             paths.filter(Files::isRegularFile)
                     .forEach(path -> {
+                        // Get the relative path from the base directory
                         Path relativePath = basePath.relativize(path);
+
+                        // Ensure the structure is at least two levels deep (company and year)
                         if (relativePath.getNameCount() >= 2) {
                             String company = relativePath.getName(0).toString();
-                            int year = Integer.parseInt(relativePath.getName(1).toString());
-                            String fileName = relativePath.getFileName().toString();
+                            try {
+                                int year = Integer.parseInt(relativePath.getName(1).toString());
+                                String fileName = relativePath.getFileName().toString();
 
-                            structure.computeIfAbsent(company, k -> new HashMap<>())
-                                    .computeIfAbsent(year, k -> new ArrayList<>())
-                                    .add(fileName);
+                                // Store the files in the map
+                                structure.computeIfAbsent(company, k -> new HashMap<>())
+                                        .computeIfAbsent(year, k -> new ArrayList<>())
+                                        .add(fileName);
+                            } catch (NumberFormatException e) {
+                                System.out.println("Invalid year format in path: " + relativePath);
+                            }
+                        } else {
+                            System.out.println("Invalid directory structure: " + relativePath);
                         }
                     });
         } catch (IOException e) {
             e.printStackTrace();
+            throw new RuntimeException("Error reading files: " + e.getMessage(), e);
         }
 
         return structure;
     }
+
 
     /**
      * Record to hold data availability information

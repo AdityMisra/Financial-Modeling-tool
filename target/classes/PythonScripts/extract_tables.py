@@ -100,17 +100,20 @@ def process_hierarchy(hierarchy_df: pd.DataFrame, cik: str, years: List[int]) ->
 
 def save_to_csv(df: pd.DataFrame, cik: str, year: int, statement_type: str, output_dir: str):
     """
-    Save data to CSV with the structure:
+    Save data to CSV for each year with the structure:
     statement_csvs/CIK/Year/CIK_statement_year.csv
     """
     # Create directory structure
-    cik_dir = os.path.join(output_dir, "statement_csvs", cik, str(year))
+    cik_dir = os.path.join(output_dir,"csvs", "statement_csvs", cik, str(year))
     os.makedirs(cik_dir, exist_ok=True)
 
-    # Save CSV
+    # Save CSV for the specific year
     csv_filename = f"{cik}_{statement_type}_{year}.csv"
     csv_path = os.path.join(cik_dir, csv_filename)
-    df.to_csv(csv_path, index=False)
+
+    # Filter DataFrame to include only the data for the current year
+    year_df = df[["API Key", "depth", str(year)]]  # Filter to include the year column only
+    year_df.to_csv(csv_path, index=False)
     print(f"Saved {csv_filename}")
 
 

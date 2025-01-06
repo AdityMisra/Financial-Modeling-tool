@@ -11,6 +11,7 @@
             margin: 0;
             font-family: Arial, sans-serif;
             height: 100vh;
+            background-color: #ECF0F1;
         }
 
         .header {
@@ -35,7 +36,6 @@
         .main-container {
             display: flex;
             flex: 1;
-            background-color: #ECF0F1;
         }
 
         .menu {
@@ -141,64 +141,52 @@
     </style>
 </head>
 <body>
-    <div class="header">Financial Model Demo</div>
 
-    <div class="main-container">
-        <div class="menu">
-            <div class="menu-item" onclick="loadContent('Fetch Data')">Fetch Data</div>
-            <div class="menu-item" onclick="loadContent('Display Existing Data')">Display Existing Data</div>
-            <div class="menu-item" onclick="loadContent('Calculate Metrics')">Calculate Metrics</div>
-            <div class="menu-item" onclick="loadContent('Monte Carlo Simulations')">Monte Carlo Simulations</div>
-        </div>
+<div class="header">Financial Model Demo</div>
 
-        <div class="content" id="content-area">
-            <h2>Welcome to the Financial Model Demo</h2>
-            <p>Select an option from the menu to get started.</p>
-        </div>
+<div class="main-container">
+    <div class="menu">
+        <div class="menu-item" onclick="loadContent('Fetch Data')">Fetch Data</div>
+        <div class="menu-item" onclick="loadContent('Display Existing Data')">Display Existing Data</div>
+        <div class="menu-item" onclick="loadContent('Calculate Metrics')">Calculate Metrics</div>
+        <div class="menu-item" onclick="loadContent('Monte Carlo Simulations')">Monte Carlo Simulations</div>
     </div>
 
-    <div class="footer">Copyright A2ZSolutions LLC 2025</div>
+    <div class="content" id="content-area">
+        <h2>Welcome to the Financial Model Demo</h2>
+        <p>Select an option from the menu to get started.</p>
+    </div>
+</div>
 
-    <script>
-        function loadContent(option) {
-            const contentArea = document.getElementById('content-area');
-            const menuItems = document.querySelectorAll('.menu-item');
-            menuItems.forEach(item => item.classList.remove('active'));
+<div class="footer">Copyright A2ZSolutions LLC 2025</div>
 
-            // Set active class
-            const activeItem = Array.from(menuItems).find(item => item.textContent === option);
-            if (activeItem) activeItem.classList.add('active');
+<script>
+    function loadContent(option) {
+        const contentArea = document.getElementById('content-area');
+        const menuItems = document.querySelectorAll('.menu-item');
+        menuItems.forEach(item => item.classList.remove('active'));
 
-            // Load content dynamically
-            if (option === 'Fetch Data') {
-                contentArea.innerHTML = `
+        // Set active class
+        const activeItem = Array.from(menuItems).find(item => item.textContent === option);
+        if (activeItem) activeItem.classList.add('active');
+
+        // Load content dynamically
+        if (option === 'Fetch Data') {
+            contentArea.innerHTML = `
                     <h2>Fetch Data</h2>
-                    <div class="split-view">
-                        <div class="top-section">
-                            <h3>Input Data</h3>
-                            <div class="input-group">
-                                <label for="cik">CIK:</label>
-                                <input type="text" id="cik">
-                            </div>
-                            <div class="input-group">
-                                <label for="year">Year:</label>
-                                <input type="text" id="year">
-                            </div>
-                            <button class="btn" onclick="fetchNewData()">Fetch New Data</button>
-                            <div class="result" id="fetch-result"></div>
-                        </div>
-
-                        <div class="folder-section">
-                            <h3>File Structure</h3>
-                            <button class="btn" onclick="fetchFolderStructure()">Fetch Existing Data</button>
-                            <div class="folder-structure" id="folder-structure">
-                                <p>No data fetched yet.</p>
-                            </div>
-                        </div>
+                    <div class="input-group">
+                        <label for="cik">CIK:</label>
+                        <input type="text" id="cik">
                     </div>
+                    <div class="input-group">
+                        <label for="year">Year:</label>
+                        <input type="text" id="year">
+                    </div>
+                    <button class="btn" onclick="fetchData()">Fetch New Data</button>
+                    <div class="result" id="fetch-result"></div>
                 `;
-            } else if (option === 'Display Existing Data') {
-                contentArea.innerHTML = `
+        } else if (option === 'Display Existing Data') {
+            contentArea.innerHTML = `
                     <h2>Display Existing Data</h2>
                     <div class="input-group">
                         <label for="cik">CIK:</label>
@@ -208,13 +196,13 @@
                         <label for="year">Year:</label>
                         <input type="text" id="year">
                     </div>
-                    <button class="btn" onclick="fetchHtmlData()">Generate HTML</button>
+                    <button class="btn" onclick="displayData()">Generate HTML</button>
                     <div class="html-display" id="html-result">
                         <p>No data generated yet.</p>
                     </div>
                 `;
-            } else if (option === 'Calculate Metrics') {
-                contentArea.innerHTML = `
+        } else if (option === 'Calculate Metrics') {
+            contentArea.innerHTML = `
                     <h2>Calculate Metrics</h2>
                     <div class="input-group">
                         <label for="cik">CIK:</label>
@@ -228,13 +216,13 @@
                         <label for="year-end">Year End:</label>
                         <input type="text" id="year-end">
                     </div>
-                    <button class="btn" onclick="fetchMetricsData()">Generate Metrics</button>
+                    <button class="btn" onclick="calculateMetrics()">Generate Metrics</button>
                     <div class="html-display" id="metrics-result">
                         <p>No data generated yet.</p>
                     </div>
                 `;
-            } else if (option === 'Monte Carlo Simulations') {
-                contentArea.innerHTML = `
+        } else if (option === 'Monte Carlo Simulations') {
+            contentArea.innerHTML = `
                     <h2>Monte Carlo Simulations</h2>
                     <div class="input-group">
                         <label for="cik">CIK:</label>
@@ -260,78 +248,94 @@
                         <label for="tax-rate">Tax Rate (%):</label>
                         <input type="number" step="0.01" id="tax-rate">
                     </div>
-                    <button class="btn" onclick="fetchMonteCarloData()">Run Simulations</button>
+                    <button class="btn" onclick="runMonteCarlo()">Run Simulations</button>
                     <div class="html-display" id="montecarlo-result">
                         <p>No data generated yet.</p>
                     </div>
                 `;
-            }
         }
+    }
 
-        function fetchMonteCarloData() {
-            const cik = document.getElementById('cik').value;
-            const yearStart = document.getElementById('year-start').value;
-            const yearEnd = document.getElementById('year-end').value;
-            const simulations = document.getElementById('simulations').value;
-            const years = document.getElementById('years').value;
-            const taxRate = document.getElementById('tax-rate').value;
-
-            fetch('RestURL:/montecarlo', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ CIK: cik, YearStart: yearStart, YearEnd: yearEnd, Simulations: simulations, Years: years, TaxRate: taxRate })
-            })
+    function fetchData() {
+        const cik = document.getElementById('cik').value;
+        const year = document.getElementById('year').value;
+        fetch('/extract-Tables', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ CIK: cik, Year: year })
+        })
             .then(response => response.text())
             .then(data => {
-                const monteCarloResult = document.getElementById('montecarlo-result');
-                monteCarloResult.innerHTML = data;
-
-                const downloadHtmlBtn = document.createElement('button');
-                downloadHtmlBtn.textContent = 'Download HTML';
-                downloadHtmlBtn.className = 'btn';
-                downloadHtmlBtn.onclick = () => downloadFile(data, 'montecarlo.html', 'text/html');
-
-                const downloadCsvBtn = document.createElement('button');
-                downloadCsvBtn.textContent = 'Download CSV';
-                downloadCsvBtn.className = 'btn';
-                downloadCsvBtn.onclick = () => downloadFile(htmlToCsv(data), 'montecarlo.csv', 'text/csv');
-
-                monteCarloResult.appendChild(downloadHtmlBtn);
-                monteCarloResult.appendChild(downloadCsvBtn);
+                document.getElementById('fetch-result').innerText = data;
             })
             .catch(error => {
-                document.getElementById('montecarlo-result').innerHTML = `<p>Error: ${error.message}</p>`;
+                document.getElementById('fetch-result').innerText = `Error: ${error.message}`;
             });
-        }
+    }
 
-        function downloadFile(content, filename, contentType) {
-            const a = document.createElement('a');
-            const blob = new Blob([content], { type: contentType });
-            const url = URL.createObjectURL(blob);
-            a.href = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
-
-        function htmlToCsv(html) {
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
-            const rows = doc.querySelectorAll('table tr');
-            let csv = '';
-
-            rows.forEach(row => {
-                const cols = row.querySelectorAll('td, th');
-                const rowCsv = Array.from(cols).map(col => col.textContent.trim()).join(',');
-                csv += rowCsv + '\n';
+    function displayData() {
+        const cik = document.getElementById('cik').value;
+        const year = document.getElementById('year').value;
+        fetch('/display_data', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ CIK: cik, Year: year })
+        })
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('html-result').innerHTML = data;
+            })
+            .catch(error => {
+                document.getElementById('html-result').innerText = `Error: ${error.message}`;
             });
+    }
 
-            return csv;
-        }
-    </script>
+    function calculateMetrics() {
+        const cik = document.getElementById('cik').value;
+        const yearStart = document.getElementById('year-start').value;
+        const yearEnd = document.getElementById('year-end').value;
+        fetch('/calculate_metrics', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ CIK: cik, YearStart: yearStart, YearEnd: yearEnd })
+        })
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('metrics-result').innerHTML = data;
+            })
+            .catch(error => {
+                document.getElementById('metrics-result').innerText = `Error: ${error.message}`;
+            });
+    }
+
+    function runMonteCarlo() {
+        const cik = document.getElementById('cik').value;
+        const yearStart = document.getElementById('year-start').value;
+        const yearEnd = document.getElementById('year-end').value;
+        const simulations = document.getElementById('simulations').value;
+        const years = document.getElementById('years').value;
+        const taxRate = document.getElementById('tax-rate').value;
+
+        fetch('/monte_carlo', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                CIK: cik,
+                YearStart: yearStart,
+                YearEnd: yearEnd,
+                Simulations: simulations,
+                Years: years,
+                TaxRate: taxRate
+            })
+        })
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('montecarlo-result').innerHTML = data;
+            })
+            .catch(error => {
+                document.getElementById('montecarlo-result').innerText = `Error: ${error.message}`;
+            });
+    }
+</script>
 </body>
 </html>

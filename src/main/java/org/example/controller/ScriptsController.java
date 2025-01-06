@@ -32,7 +32,7 @@ public class ScriptsController {
     /**
      * Extract financial tables from SEC data
      */
-    @PostMapping("/extract-tables")
+    @PostMapping("/extractTables")
     public ResponseEntity<extractTableResponse> extractTables(@RequestBody extractTableRequest request) {
         try {
             List<String> ciks = request.getCiks();
@@ -107,6 +107,21 @@ public class ScriptsController {
                     .header(HttpHeaders.CONTENT_DISPOSITION,
                             "attachment; filename=\"" + filename + "\"")
                     .body(resource);
+        } catch (IOException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @GetMapping("/files/view/html/{company}/{statement}/{year}")
+    public ResponseEntity<String> viewStatementAsHtml(
+            @PathVariable String company,
+            @PathVariable String statement,
+            @PathVariable Integer year) {
+        try {
+            String html = scriptsService.generateHtml(company, statement, year);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.TEXT_HTML)
+                    .body(html);
         } catch (IOException e) {
             return ResponseEntity.notFound().build();
         }
