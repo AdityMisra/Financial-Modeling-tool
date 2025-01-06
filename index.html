@@ -170,7 +170,167 @@
             if (activeItem) activeItem.classList.add('active');
 
             // Load content dynamically
-            contentArea.innerHTML = `<h2>${option}</h2><p>Content for ${option} will appear here.</p>`;
+            if (option === 'Fetch Data') {
+                contentArea.innerHTML = `
+                    <h2>Fetch Data</h2>
+                    <div class="split-view">
+                        <div class="top-section">
+                            <h3>Input Data</h3>
+                            <div class="input-group">
+                                <label for="cik">CIK:</label>
+                                <input type="text" id="cik">
+                            </div>
+                            <div class="input-group">
+                                <label for="year">Year:</label>
+                                <input type="text" id="year">
+                            </div>
+                            <button class="btn" onclick="fetchNewData()">Fetch New Data</button>
+                            <div class="result" id="fetch-result"></div>
+                        </div>
+
+                        <div class="folder-section">
+                            <h3>File Structure</h3>
+                            <button class="btn" onclick="fetchFolderStructure()">Fetch Existing Data</button>
+                            <div class="folder-structure" id="folder-structure">
+                                <p>No data fetched yet.</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else if (option === 'Display Existing Data') {
+                contentArea.innerHTML = `
+                    <h2>Display Existing Data</h2>
+                    <div class="input-group">
+                        <label for="cik">CIK:</label>
+                        <input type="text" id="cik">
+                    </div>
+                    <div class="input-group">
+                        <label for="year">Year:</label>
+                        <input type="text" id="year">
+                    </div>
+                    <button class="btn" onclick="fetchHtmlData()">Generate HTML</button>
+                    <div class="html-display" id="html-result">
+                        <p>No data generated yet.</p>
+                    </div>
+                `;
+            } else if (option === 'Calculate Metrics') {
+                contentArea.innerHTML = `
+                    <h2>Calculate Metrics</h2>
+                    <div class="input-group">
+                        <label for="cik">CIK:</label>
+                        <input type="text" id="cik">
+                    </div>
+                    <div class="input-group">
+                        <label for="year-start">Year Start:</label>
+                        <input type="text" id="year-start">
+                    </div>
+                    <div class="input-group">
+                        <label for="year-end">Year End:</label>
+                        <input type="text" id="year-end">
+                    </div>
+                    <button class="btn" onclick="fetchMetricsData()">Generate Metrics</button>
+                    <div class="html-display" id="metrics-result">
+                        <p>No data generated yet.</p>
+                    </div>
+                `;
+            } else if (option === 'Monte Carlo Simulations') {
+                contentArea.innerHTML = `
+                    <h2>Monte Carlo Simulations</h2>
+                    <div class="input-group">
+                        <label for="cik">CIK:</label>
+                        <input type="text" id="cik">
+                    </div>
+                    <div class="input-group">
+                        <label for="year-start">Start Year:</label>
+                        <input type="text" id="year-start">
+                    </div>
+                    <div class="input-group">
+                        <label for="year-end">End Year:</label>
+                        <input type="text" id="year-end">
+                    </div>
+                    <div class="input-group">
+                        <label for="simulations">No. of Simulations:</label>
+                        <input type="number" id="simulations">
+                    </div>
+                    <div class="input-group">
+                        <label for="years">No. of Years:</label>
+                        <input type="number" id="years">
+                    </div>
+                    <div class="input-group">
+                        <label for="tax-rate">Tax Rate (%):</label>
+                        <input type="number" step="0.01" id="tax-rate">
+                    </div>
+                    <button class="btn" onclick="fetchMonteCarloData()">Run Simulations</button>
+                    <div class="html-display" id="montecarlo-result">
+                        <p>No data generated yet.</p>
+                    </div>
+                `;
+            }
+        }
+
+        function fetchMonteCarloData() {
+            const cik = document.getElementById('cik').value;
+            const yearStart = document.getElementById('year-start').value;
+            const yearEnd = document.getElementById('year-end').value;
+            const simulations = document.getElementById('simulations').value;
+            const years = document.getElementById('years').value;
+            const taxRate = document.getElementById('tax-rate').value;
+
+            fetch('RestURL:/montecarlo', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ CIK: cik, YearStart: yearStart, YearEnd: yearEnd, Simulations: simulations, Years: years, TaxRate: taxRate })
+            })
+            .then(response => response.text())
+            .then(data => {
+                const monteCarloResult = document.getElementById('montecarlo-result');
+                monteCarloResult.innerHTML = data;
+
+                const downloadHtmlBtn = document.createElement('button');
+                downloadHtmlBtn.textContent = 'Download HTML';
+                downloadHtmlBtn.className = 'btn';
+                downloadHtmlBtn.onclick = () => downloadFile(data, 'montecarlo.html', 'text/html');
+
+                const downloadCsvBtn = document.createElement('button');
+                downloadCsvBtn.textContent = 'Download CSV';
+                downloadCsvBtn.className = 'btn';
+                downloadCsvBtn.onclick = () => downloadFile(htmlToCsv(data), 'montecarlo.csv', 'text/csv');
+
+                monteCarloResult.appendChild(downloadHtmlBtn);
+                monteCarloResult.appendChild(downloadCsvBtn);
+            })
+            .catch(error => {
+                document.getElementById('montecarlo-result').innerHTML = `<p>Error: ${error.message}</p>`;
+            });
+        }
+
+        function downloadFile(content, filename, contentType) {
+            const a = document.createElement('a');
+            const blob = new Blob([content], { type: contentType });
+            const url = URL.createObjectURL(blob);
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function htmlToCsv(html) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const rows = doc.querySelectorAll('table tr');
+            let csv = '';
+
+            rows.forEach(row => {
+                const cols = row.querySelectorAll('td, th');
+                const rowCsv = Array.from(cols).map(col => col.textContent.trim()).join(',');
+                csv += rowCsv + '\n';
+            });
+
+            return csv;
         }
     </script>
 </body>
