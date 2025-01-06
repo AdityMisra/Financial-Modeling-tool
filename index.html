@@ -3,19 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Financial Model UI</title>
+    <title>Financial Model Demo</title>
     <style>
         body {
             display: flex;
+            flex-direction: column;
             margin: 0;
             font-family: Arial, sans-serif;
+            height: 100vh;
+        }
+
+        .header {
+            width: 100%;
+            background-color: #007BFF;
+            color: #fff;
+            padding: 10px;
+            text-align: center;
+            font-size: 1.5em;
+        }
+
+        .footer {
+            width: 100%;
+            background-color: #f4f4f4;
+            text-align: center;
+            padding: 10px;
+            font-size: 0.9em;
+            color: #555;
+        }
+
+        .main-container {
+            display: flex;
+            flex: 1;
         }
 
         .menu {
             width: 20%;
-            background-color: #f4f4f4;
-            border-right: 1px solid #ddd;
-            height: 100vh;
+            background-color: #d3d3d3;
+            border-right: 2px solid #000;
+            height: 100%;
             padding: 10px;
             box-sizing: border-box;
         }
@@ -23,14 +48,15 @@
         .menu-item {
             padding: 10px;
             cursor: pointer;
-            border: 1px solid transparent;
+            border: 2px solid transparent;
             margin-bottom: 5px;
             text-align: center;
+            background-color: #f9f9f9;
         }
 
         .menu-item:hover {
             background-color: #e0e0e0;
-            border: 1px solid #ccc;
+            border: 2px solid #555;
         }
 
         .menu-item.active {
@@ -42,6 +68,7 @@
             width: 80%;
             padding: 20px;
             box-sizing: border-box;
+            background-color: #fff;
         }
 
         .input-group {
@@ -104,16 +131,23 @@
     </style>
 </head>
 <body>
-    <div class="menu">
-        <div class="menu-item" onclick="loadContent('Fetch Data')">Fetch Data</div>
-        <div class="menu-item" onclick="loadContent('Display Existing Data')">Display Existing Data</div>
-        <div class="menu-item" onclick="loadContent('option3')">Option 3</div>
+    <div class="header">Financial Model Demo</div>
+
+    <div class="main-container">
+        <div class="menu">
+            <div class="menu-item" onclick="loadContent('Fetch Data')">Fetch Data</div>
+            <div class="menu-item" onclick="loadContent('Display Existing Data')">Display Existing Data</div>
+            <div class="menu-item" onclick="loadContent('Calculate Metrics')">Calculate Metrics</div>
+            <div class="menu-item" onclick="loadContent('Monte Carlo Simulations')">Monte Carlo Simulations</div>
+        </div>
+
+        <div class="content" id="content-area">
+            <h2>Welcome to the Financial Model Demo</h2>
+            <p>Select an option from the menu to get started.</p>
+        </div>
     </div>
 
-    <div class="content" id="content-area">
-        <h2>Welcome to the Financial Model UI</h2>
-        <p>Select an option from the menu to get started.</p>
-    </div>
+    <div class="footer">Copyright A2ZSolutions LLC 2025</div>
 
     <script>
         function loadContent(option) {
@@ -169,40 +203,96 @@
                         <p>No data generated yet.</p>
                     </div>
                 `;
+            } else if (option === 'Calculate Metrics') {
+                contentArea.innerHTML = `
+                    <h2>Calculate Metrics</h2>
+                    <div class="input-group">
+                        <label for="cik">CIK:</label>
+                        <input type="text" id="cik">
+                    </div>
+                    <div class="input-group">
+                        <label for="year-start">Year Start:</label>
+                        <input type="text" id="year-start">
+                    </div>
+                    <div class="input-group">
+                        <label for="year-end">Year End:</label>
+                        <input type="text" id="year-end">
+                    </div>
+                    <button class="btn" onclick="fetchMetricsData()">Generate Metrics</button>
+                    <div class="html-display" id="metrics-result">
+                        <p>No data generated yet.</p>
+                    </div>
+                `;
+            } else if (option === 'Monte Carlo Simulations') {
+                contentArea.innerHTML = `
+                    <h2>Monte Carlo Simulations</h2>
+                    <div class="input-group">
+                        <label for="cik">CIK:</label>
+                        <input type="text" id="cik">
+                    </div>
+                    <div class="input-group">
+                        <label for="year-start">Start Year:</label>
+                        <input type="text" id="year-start">
+                    </div>
+                    <div class="input-group">
+                        <label for="year-end">End Year:</label>
+                        <input type="text" id="year-end">
+                    </div>
+                    <div class="input-group">
+                        <label for="simulations">No. of Simulations:</label>
+                        <input type="number" id="simulations">
+                    </div>
+                    <div class="input-group">
+                        <label for="years">No. of Years:</label>
+                        <input type="number" id="years">
+                    </div>
+                    <div class="input-group">
+                        <label for="tax-rate">Tax Rate (%):</label>
+                        <input type="number" step="0.01" id="tax-rate">
+                    </div>
+                    <button class="btn" onclick="fetchMonteCarloData()">Run Simulations</button>
+                    <div class="html-display" id="montecarlo-result">
+                        <p>No data generated yet.</p>
+                    </div>
+                `;
             }
         }
 
-        function fetchHtmlData() {
+        function fetchMonteCarloData() {
             const cik = document.getElementById('cik').value;
-            const year = document.getElementById('year').value;
+            const yearStart = document.getElementById('year-start').value;
+            const yearEnd = document.getElementById('year-end').value;
+            const simulations = document.getElementById('simulations').value;
+            const years = document.getElementById('years').value;
+            const taxRate = document.getElementById('tax-rate').value;
 
-            fetch('RestURL:/FetchHTML', {
+            fetch('RestURL:/montecarlo', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ CIK: cik, Year: year })
+                body: JSON.stringify({ CIK: cik, YearStart: yearStart, YearEnd: yearEnd, Simulations: simulations, Years: years, TaxRate: taxRate })
             })
             .then(response => response.text())
             .then(data => {
-                const htmlResult = document.getElementById('html-result');
-                htmlResult.innerHTML = data;
+                const monteCarloResult = document.getElementById('montecarlo-result');
+                monteCarloResult.innerHTML = data;
 
                 const downloadHtmlBtn = document.createElement('button');
                 downloadHtmlBtn.textContent = 'Download HTML';
                 downloadHtmlBtn.className = 'btn';
-                downloadHtmlBtn.onclick = () => downloadFile(data, 'data.html', 'text/html');
+                downloadHtmlBtn.onclick = () => downloadFile(data, 'montecarlo.html', 'text/html');
 
                 const downloadCsvBtn = document.createElement('button');
                 downloadCsvBtn.textContent = 'Download CSV';
                 downloadCsvBtn.className = 'btn';
-                downloadCsvBtn.onclick = () => downloadFile(htmlToCsv(data), 'data.csv', 'text/csv');
+                downloadCsvBtn.onclick = () => downloadFile(htmlToCsv(data), 'montecarlo.csv', 'text/csv');
 
-                htmlResult.appendChild(downloadHtmlBtn);
-                htmlResult.appendChild(downloadCsvBtn);
+                monteCarloResult.appendChild(downloadHtmlBtn);
+                monteCarloResult.appendChild(downloadCsvBtn);
             })
             .catch(error => {
-                document.getElementById('html-result').innerHTML = `<p>Error: ${error.message}</p>`;
+                document.getElementById('montecarlo-result').innerHTML = `<p>Error: ${error.message}</p>`;
             });
         }
 
