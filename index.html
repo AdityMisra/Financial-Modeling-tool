@@ -76,11 +76,27 @@
         .result {
             margin-top: 20px;
         }
+
+        .split-view {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .top-section {
+            margin-bottom: 20px;
+        }
+
+        .folder-structure {
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
     </style>
 </head>
 <body>
     <div class="menu">
-        <div class="menu-item" onclick="loadContent('option1')">Option 1</div>
+        <div class="menu-item" onclick="loadContent('Fetch Data')">Fetch Data</div>
         <div class="menu-item" onclick="loadContent('option2')">Option 2</div>
         <div class="menu-item" onclick="loadContent('option3')">Option 3</div>
     </div>
@@ -101,56 +117,96 @@
             if (activeItem) activeItem.classList.add('active');
 
             // Load content dynamically
-            if (option === 'option1') {
+            if (option === 'Fetch Data') {
                 contentArea.innerHTML = `
-                    <h2>Option 1</h2>
-                    <div class="input-group">
-                        <label for="input1">Input 1:</label>
-                        <input type="text" id="input1">
+                    <h2>Fetch Data</h2>
+                    <div class="split-view">
+                        <div class="top-section">
+                            <h3>Input Data</h3>
+                            <div class="input-group">
+                                <label for="cik">CIK:</label>
+                                <input type="text" id="cik">
+                            </div>
+                            <div class="input-group">
+                                <label for="year">Year:</label>
+                                <input type="text" id="year">
+                            </div>
+                            <button class="btn" onclick="fetchNewData()">Fetch New Data</button>
+                            <div class="result" id="fetch-result"></div>
+                        </div>
+
+                        <div class="folder-section">
+                            <h3>File Structure</h3>
+                            <button class="btn" onclick="fetchFolderStructure()">Fetch Existing Data</button>
+                            <div class="folder-structure" id="folder-structure">
+                                <p>No data fetched yet.</p>
+                            </div>
+                        </div>
                     </div>
-                    <button class="btn" onclick="executeAction('option1')">Submit</button>
-                    <div class="result" id="result1"></div>
-                `;
-            } else if (option === 'option2') {
-                contentArea.innerHTML = `
-                    <h2>Option 2</h2>
-                    <div class="input-group">
-                        <label for="input2">Input 2:</label>
-                        <input type="text" id="input2">
-                    </div>
-                    <button class="btn" onclick="executeAction('option2')">Submit</button>
-                    <div class="result" id="result2"></div>
-                `;
-            } else if (option === 'option3') {
-                contentArea.innerHTML = `
-                    <h2>Option 3</h2>
-                    <div class="input-group">
-                        <label for="input3">Input 3:</label>
-                        <input type="text" id="input3">
-                    </div>
-                    <button class="btn" onclick="executeAction('option3')">Submit</button>
-                    <div class="result" id="result3"></div>
                 `;
             }
         }
 
-        function executeAction(option) {
-            let input;
-            if (option === 'option1') {
-                input = document.getElementById('input1').value;
-            } else if (option === 'option2') {
-                input = document.getElementById('input2').value;
-            } else if (option === 'option3') {
-                input = document.getElementById('input3').value;
-            }
+        function fetchNewData() {
+            const cik = document.getElementById('cik').value;
+            const year = document.getElementById('year').value;
 
-            // Simulating API call
-            const resultDiv = document.getElementById(`result${option.slice(-1)}`);
-            resultDiv.innerHTML = `<p>Processing ${option} with input: ${input}</p>`;
-            setTimeout(() => {
-                resultDiv.innerHTML += `<p>Result for ${option}: ${input.toUpperCase()}</p>`;
-            }, 1000);
+            fetch('RestURL:/FetchData', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ CIK: cik, Year: year })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('fetch-result').innerHTML = `<p>Data fetched successfully: ${JSON.stringify(data)}</p>`;
+            })
+            .catch(error => {
+                document.getElementById('fetch-result').innerHTML = `<p>Error: ${error.message}</p>`;
+            });
         }
+
+        function fetchFolderStructure() {
+            fetch('RestURL:/FetchFolderStructure')
+            .then(response => response.json())
+            .then(data => {
+                const folderStructure = document.getElementById('folder-structure');
+                folderStructure.innerHTML = renderFolderStructure(data);
+            })
+            .catch(error => {
+                document.getElementById('folder-structure').innerHTML = `<p>Error: ${error.message}</p>`;
+            });
+        }
+
+        function renderFolderStructure(data) {
+            let html = '<ul>';
+            for (const folder in data) {
+                html += `<li>${folder}`;
+                if (Array.isArray(data[folder])) {
+                    html += '<ul>';
+                    data[folder].forEach(file => {
+                        html += `<li>${file}</li>`;
+                    });
+                    html += '</ul>';
+                }
+                html += '</li>';
+            }
+            html += '</ul>';
+            return html;
+        }
+
+        // Mock folder structure for testing
+        const mockFolderStructure = {
+            "Folder1": ["File1.txt", "File2.txt"],
+            "Folder2": ["File3.txt", "File4.txt"],
+            "Folder3": []
+        };
+
+        // Preload mock data
+        fetchFolderStructure = function() {
+            document.getElementById('folder-structure').innerHTML = renderFolderStructure(mockFolderStructure);
+        };
     </script>
 </body>
 </html>
