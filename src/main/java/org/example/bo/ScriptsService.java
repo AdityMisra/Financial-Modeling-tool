@@ -59,7 +59,8 @@ public class ScriptsService {
     /**
      * Extract tables from SEC data
      */
-    public extractTableResponse extractTables(List <String> ciks, List<Integer> years) {
+
+    public extractTableResponse extractTables(List<String> ciks, List<Integer> years) {
         try {
             String companiesArg = objectMapper.writeValueAsString(ciks);
             String yearsArg = objectMapper.writeValueAsString(years);
@@ -68,9 +69,41 @@ public class ScriptsService {
             String gaapTaxonomy = Paths.get(System.getProperty("user.dir"), gaapTaxonomyPath).toString();
             String outputPath = Paths.get(System.getProperty("user.dir"), outputBaseDir).toString();
 
-            // Create directory structure
-            Files.createDirectories(Paths.get(outputPath, "csvs", "statement_csvs"));
+            // Create directory structure if it doesn't exist
+            Path csvDirPath = Paths.get(outputPath, "csvs", "statement_csvs");
+            Files.createDirectories(csvDirPath);
 
+            boolean filesExist = true;
+            // Check if directories already exist for each CIK and year
+            for (String cik : ciks) {
+                for (Integer year : years) {
+                    // Construct the path based on the correct directory structure
+                    Path yearDirPath = csvDirPath.resolve(cik).resolve(year.toString());
+
+                    System.out.println("Checking directory: " + yearDirPath.toString());  // Debug log
+
+                    if (!Files.exists(yearDirPath)) {
+                        filesExist = false;  // At least one directory doesn't exist, so we need to run the script
+                        break;  // Stop further checks and proceed to execute script
+                    }
+                }
+
+                if (!filesExist) {
+                    break;  // If any directory doesn't exist, stop the loop
+                }
+            }
+
+            if (filesExist) {
+                // If all directories exist, return a response saying so
+                return new extractTableResponse(
+                        "Skipped",
+                        "Required directories already exist for the selected CIK and Year(s). Please check the 'Display Existing data tab' ",
+                        Collections.emptyList(), // No new files
+                        Collections.emptyList()
+                );
+            }
+
+            // If directories don't exist, execute the Python script to generate them
             String[] command = {"python3", scriptPath, companiesArg, yearsArg, gaapTaxonomy, outputPath};
             System.out.println("Executing command: " + String.join(" ", command));
 
@@ -94,6 +127,9 @@ public class ScriptsService {
             );
         }
     }
+
+
+
 
     /**
      * Execute Python script

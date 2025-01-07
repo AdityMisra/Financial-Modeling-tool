@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Model Demo</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            height: 100vh;
+            background-color: #ECF0F1;
+        }
+
+        .header {
+            width: 100%;
+            background-color: #2C3E50;
+            color: #ECF0F1;
+            padding: 15px;
+            text-align: center;
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .footer {
+            width: 100%;
+            background-color: #2C3E50;
+            color: #ECF0F1;
+            text-align: center;
+            padding: 10px;
+            font-size: 0.9em;
+        }
+
+        .main-container {
+            display: flex;
+            flex: 1;
+        }
+
+        .menu {
+            width: 20%;
+            background-color: #BDC3C7;
+            border-right: 3px solid #34495E;
+            height: 100%;
+            padding: 15px;
+            box-sizing: border-box;
+        }
+
+        .menu-item {
+            padding: 10px;
+            cursor: pointer;
+            margin-bottom: 10px;
+            text-align: center;
+            font-size: 1em;
+            color: #2C3E50;
+            background-color: #ECF0F1;
+            border: 2px solid transparent;
+            border-radius: 5px;
+        }
+
+        .menu-item:hover {
+            background-color: #95A5A6;
+            color: #ECF0F1;
+            border: 2px solid #34495E;
+        }
+
+        .menu-item.active {
+            background-color: #34495E;
+            color: #ECF0F1;
+            border: 2px solid #2C3E50;
+        }
+
+        .content {
+            width: 80%;
+            padding: 20px;
+            box-sizing: border-box;
+            background-color: #FFFFFF;
+            border-left: 3px solid #BDC3C7;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #BDC3C7;
+            border-radius: 4px;
+        }
+
+        .btn {
+            padding: 10px 15px;
+            background-color: #34495E;
+            color: #ECF0F1;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+
+        .btn:hover {
+            background-color: #2C3E50;
+        }
+
+        .result {
+            margin-top: 20px;
+        }
+
+        .html-display {
+            margin-top: 20px;
+            border: 1px solid #BDC3C7;
+            padding: 15px;
+            border-radius: 5px;
+            background-color: #F4F6F7;
+            overflow-x: auto;
+        }
+
+        .split-view {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .top-section {
+            margin-bottom: 20px;
+        }
+
+        .folder-structure {
+            border: 1px solid #BDC3C7;
+            padding: 15px;
+            border-radius: 5px;
+            background-color: #F4F6F7;
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">Financial Model Demo</div>
+
+<div class="main-container">
+    <div class="menu">
+        <div class="menu-item" onclick="loadContent('Display Existing Data')">Display Existing Data</div>
+        <div class="menu-item" onclick="loadContent('Fetch Data')">Fetch Data</div>
+        <div class="menu-item" onclick="loadContent('Generate 3 statement model')">Generate 3 statement Model</div>
+        <div class="menu-item" onclick="loadContent('Calculate Metrics')">Calculate Metrics</div>
+        <div class="menu-item" onclick="loadContent('Monte Carlo Simulations')">Monte Carlo Simulations</div>
+    </div>
+
+    <div class="content" id="content-area">
+        <h2>Welcome to the Financial Model Demo</h2>
+        <p>Select an option from the menu to get started.</p>
+    </div>
+</div>
+
+<div class="footer">Copyright A2ZSolutions LLC 2025</div>
+
+<script>
+    function loadContent(option) {
+        const contentArea = document.getElementById('content-area');
+        const menuItems = document.querySelectorAll('.menu-item');
+        menuItems.forEach(item => item.classList.remove('active'));
+
+        // Set active class
+        const activeItem = Array.from(menuItems).find(item => item.textContent === option);
+        if (activeItem) activeItem.classList.add('active');
+
+        // Load content dynamically
+        if (option === 'Fetch Data') {
+            contentArea.innerHTML = `
+                    <h2>Fetch Data</h2>
+                    <div class="input-group">
+                        <label for="cik">CIK:</label>
+                        <input type="text" id="cik">
+                    </div>
+                    <div class="input-group">
+                        <label for="year">Year:</label>
+                        <input type="text" id="year">
+                    </div>
+                    <button class="btn" onclick="fetchData()">Fetch New Data</button>
+                    <div class="result" id="fetch-result"></div>
+                `;
+        } else if (option === 'Display Existing Data') {
+            contentArea.innerHTML = `
+                    <h2>Display Existing Data</h2>
+                    <div class="input-group">
+                        <label for="cik">CIK:</label>
+                        <input type="text" id="cik">
+                    </div>
+                    <div class="input-group">
+                        <label for="year">Year:</label>
+                        <input type="text" id="year">
+                    </div>
+                    <button class="btn" onclick="displayData()">Generate HTML</button>
+                    <div class="html-display" id="html-result">
+                        <p>No data generated yet.</p>
+                    </div>
+                `;
+        } else if (option === 'Calculate Metrics') {
+            contentArea.innerHTML = `
+                    <h2>Calculate Metrics</h2>
+                    <div class="input-group">
+                        <label for="cik">CIK:</label>
+                        <input type="text" id="cik">
+                    </div>
+                    <div class="input-group">
+                        <label for="year-start">Year Start:</label>
+                        <input type="text" id="year-start">
+                    </div>
+                    <div class="input-group">
+                        <label for="year-end">Year End:</label>
+                        <input type="text" id="year-end">
+                    </div>
+                    <button class="btn" onclick="calculateMetrics()">Generate Metrics</button>
+                    <div class="html-display" id="metrics-result">
+                        <p>No data generated yet.</p>
+                    </div>
+                `;
+        } else if (option === 'Monte Carlo Simulations') {
+            contentArea.innerHTML = `
+                    <h2>Monte Carlo Simulations</h2>
+                    <div class="input-group">
+                        <label for="cik">CIK:</label>
+                        <input type="text" id="cik">
+                    </div>
+                    <div class="input-group">
+                        <label for="year-start">Start Year:</label>
+                        <input type="text" id="year-start">
+                    </div>
+                    <div class="input-group">
+                        <label for="year-end">End Year:</label>
+                        <input type="text" id="year-end">
+                    </div>
+                    <div class="input-group">
+                        <label for="simulations">No. of Simulations:</label>
+                        <input type="number" id="simulations">
+                    </div>
+                    <div class="input-group">
+                        <label for="years">No. of Years:</label>
+                        <input type="number" id="years">
+                    </div>
+                    <div class="input-group">
+                        <label for="tax-rate">Tax Rate (%):</label>
+                        <input type="number" step="0.01" id="tax-rate">
+                    </div>
+                    <button class="btn" onclick="runMonteCarlo()">Run Simulations</button>
+                    <div class="html-display" id="montecarlo-result">
+                        <p>No data generated yet.</p>
+                    </div>
+                `;
+        }
+    }
+
+    function fetchData() {
+        const cikInput = document.getElementById('cik').value;
+        const yearInput = document.getElementById('year').value;
+
+        // Split the inputs by comma and trim any extra spaces
+        const ciks = cikInput.split(',').map(cik => cik.trim());
+        const years = yearInput.split(',').map(year => parseInt(year.trim(), 10));
+
+        // Check if inputs are valid
+        if (ciks.length === 0 || years.length === 0) {
+            document.getElementById('fetch-result').innerText = "Please enter valid CIKs and Years.";
+            return;
+        }
+
+        // Send the POST request with proper payload
+        fetch('http://localhost:8080/api/extractTables', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ciks: ciks, years: years })
+        })
+            .then(response => response.json())  // Expecting JSON response
+            .then(data => {
+                console.log('API Response:', data);  // Log the entire response to the console
+
+                // Check if the response contains 'status' and 'message'
+                if (data && data.status) {
+                    // Display the status and message
+                    let resultMessage = `Status: ${data.status}\nMessage: ${data.message}`;
+
+                    // If CSV files are available, list them
+                    if (data.csvFiles && data.csvFiles.length > 0) {
+                        resultMessage += `\nGenerated CSV Files:\n- ${data.csvFiles.join('\n- ')}`;
+                    }
+
+                    // If HTML files are available, list them
+                    if (data.htmlFiles && data.htmlFiles.length > 0) {
+                        resultMessage += `\nGenerated HTML Files:\n- ${data.htmlFiles.join('\n- ')}`;
+                    }
+
+                    // Display the result
+                    document.getElementById('fetch-result').innerText = resultMessage;
+                } else {
+                    document.getElementById('fetch-result').innerText = 'Unexpected response format. Check the console for more details.';
+                }
+            })
+            .catch(error => {
+                // Handle errors
+                document.getElementById('fetch-result').innerText = `Error: ${error.message}`;
+            });
+    }
+
+
+
+    function displayData() {
+        const cik = document.getElementById('cik').value;
+        const year = document.getElementById('year').value;
+        fetch('/display_data', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ CIK: cik, Year: year })
+        })
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('html-result').innerHTML = data;
+            })
+            .catch(error => {
+                document.getElementById('html-result').innerText = `Error: ${error.message}`;
+            });
+    }
+
+    function calculateMetrics() {
+        const cik = document.getElementById('cik').value;
+        const yearStart = document.getElementById('year-start').value;
+        const yearEnd = document.getElementById('year-end').value;
+        fetch('/calculate_metrics', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ CIK: cik, YearStart: yearStart, YearEnd: yearEnd })
+        })
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('metrics-result').innerHTML = data;
+            })
+            .catch(error => {
+                document.getElementById('metrics-result').innerText = `Error: ${error.message}`;
+            });
+    }
+
+    function runMonteCarlo() {
+        const cik = document.getElementById('cik').value;
+        const yearStart = document.getElementById('year-start').value;
+        const yearEnd = document.getElementById('year-end').value;
+        const simulations = document.getElementById('simulations').value;
+        const years = document.getElementById('years').value;
+        const taxRate = document.getElementById('tax-rate').value;
+
+        fetch('/monte_carlo', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                CIK: cik,
+                YearStart: yearStart,
+                YearEnd: yearEnd,
+                Simulations: simulations,
+                Years: years,
+                TaxRate: taxRate
+            })
+        })
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('montecarlo-result').innerHTML = data;
+            })
+            .catch(error => {
+                document.getElementById('montecarlo-result').innerText = `Error: ${error.message}`;
+            });
+    }
+</script>
+</body>
+</html>

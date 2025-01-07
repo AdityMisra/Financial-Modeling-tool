@@ -146,8 +146,9 @@
 
 <div class="main-container">
     <div class="menu">
-        <div class="menu-item" onclick="loadContent('Fetch Data')">Fetch Data</div>
         <div class="menu-item" onclick="loadContent('Display Existing Data')">Display Existing Data</div>
+        <div class="menu-item" onclick="loadContent('Fetch Data')">Fetch Data</div>
+        <div class="menu-item" onclick="loadContent('Generate 3 statement model')">Generate 3 statement Model</div>
         <div class="menu-item" onclick="loadContent('Calculate Metrics')">Calculate Metrics</div>
         <div class="menu-item" onclick="loadContent('Monte Carlo Simulations')">Monte Carlo Simulations</div>
     </div>
@@ -257,21 +258,57 @@
     }
 
     function fetchData() {
-        const cik = document.getElementById('cik').value;
-        const year = document.getElementById('year').value;
-        fetch('/extract-Tables', {
+        const cikInput = document.getElementById('cik').value;
+        const yearInput = document.getElementById('year').value;
+
+        // Split the inputs by comma and trim any extra spaces
+        const ciks = cikInput.split(',').map(cik => cik.trim());
+        const years = yearInput.split(',').map(year => parseInt(year.trim(), 10));
+
+        // Check if inputs are valid
+        if (ciks.length === 0 || years.length === 0) {
+            document.getElementById('fetch-result').innerText = "Please enter valid CIKs and Years.";
+            return;
+        }
+
+        // Send the POST request with proper payload
+        fetch('http://localhost:8080/api/extractTables', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ CIK: cik, Year: year })
+            body: JSON.stringify({ ciks: ciks, years: years })
         })
-            .then(response => response.text())
+            .then(response => response.json())  // Expecting JSON response
             .then(data => {
-                document.getElementById('fetch-result').innerText = data;
+                console.log('API Response:', data);  // Log the entire response to the console
+
+                // Check if the response contains 'status' and 'message'
+                if (data && data.status) {
+                    // Display the status and message
+                    let resultMessage = `Status: ${data.status}\nMessage: ${data.message}`;
+
+                    // If CSV files are available, list them
+                    if (data.csvFiles && data.csvFiles.length > 0) {
+                        resultMessage += `\nGenerated CSV Files:\n- ${data.csvFiles.join('\n- ')}`;
+                    }
+
+                    // If HTML files are available, list them
+                    if (data.htmlFiles && data.htmlFiles.length > 0) {
+                        resultMessage += `\nGenerated HTML Files:\n- ${data.htmlFiles.join('\n- ')}`;
+                    }
+
+                    // Display the result
+                    document.getElementById('fetch-result').innerText = resultMessage;
+                } else {
+                    document.getElementById('fetch-result').innerText = 'Unexpected response format. Check the console for more details.';
+                }
             })
             .catch(error => {
+                // Handle errors
                 document.getElementById('fetch-result').innerText = `Error: ${error.message}`;
             });
     }
+
+
 
     function displayData() {
         const cik = document.getElementById('cik').value;

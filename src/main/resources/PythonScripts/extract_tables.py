@@ -104,7 +104,7 @@ def save_to_csv(df: pd.DataFrame, cik: str, year: int, statement_type: str, outp
     statement_csvs/CIK/Year/CIK_statement_year.csv
     """
     # Create directory structure
-    cik_dir = os.path.join(output_dir,"csvs", "statement_csvs", cik, str(year))
+    cik_dir = os.path.join(output_dir, "statement_csvs", cik, str(year))
     os.makedirs(cik_dir, exist_ok=True)
 
     # Save CSV for the specific year
@@ -124,7 +124,6 @@ def main():
         data = pd.read_csv(file_path)
         OUTPUT_DIR = sys.argv[4]
         output_directory_csv = os.path.join(OUTPUT_DIR, "csvs")
-        output_directory_html = os.path.join(OUTPUT_DIR, "html")
     except FileNotFoundError:
         print(f"Error: Could not find file {file_path}")
         return
