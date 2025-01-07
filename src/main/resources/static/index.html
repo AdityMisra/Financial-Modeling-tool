@@ -190,18 +190,23 @@
             contentArea.innerHTML = `
                     <h2>Display Existing Data</h2>
                     <div class="input-group">
-                        <label for="cik">CIK:</label>
-                        <input type="text" id="cik">
-                    </div>
-                    <div class="input-group">
-                        <label for="year">Year:</label>
-                        <input type="text" id="year">
-                    </div>
-                    <button class="btn" onclick="displayData()">Generate HTML</button>
-                    <div class="html-display" id="html-result">
-                        <p>No data generated yet.</p>
-                    </div>
+    <label>Folder Structure:</label>
+    <pre id="folder-structure">Loading...</pre>
+</div>
+<div class="input-group">
+    <label for="cik">CIK:</label>
+    <input type="text" id="cik">
+</div>
+<div class="input-group">
+    <label for="year">Year:</label>
+    <input type="text" id="year">
+</div>
+<button class="btn" onclick="displayData()">Generate HTML</button>
+<div class="html-display" id="html-result">
+    <p>No data generated yet.</p>
+</div>
                 `;
+            displayFolderStructure();
         } else if (option === 'Calculate Metrics') {
             contentArea.innerHTML = `
                     <h2>Calculate Metrics</h2>
@@ -309,11 +314,90 @@
     }
 
 
+    document.addEventListener("DOMContentLoaded", function() {
+        console.log('DOM fully loaded');
 
+        const checkFolderStructure = setInterval(function() {
+            const folderStructureDiv = document.getElementById('folder-structure');
+            if (folderStructureDiv) {
+                console.log('Element found, calling displayFolderStructure...');
+                clearInterval(checkFolderStructure);  // Stop checking once element is found
+                displayFolderStructure();
+            } else {
+                console.log('Waiting for folder-structure element...');
+            }
+        }, 100);  // Check every 100ms
+    });
+
+
+    // Function to display the folder structure
+    function displayFolderStructure() {
+        let folderStructureDiv = document.getElementById('folder-structure');
+
+        // Check if the element exists before proceeding
+        if (!folderStructureDiv) {
+            console.error('Element with ID "folder-structure" not found!');
+            return;
+        }
+
+        // Set the loading text before fetching data
+        folderStructureDiv.innerHTML = 'Loading...';
+
+        console.log('Making fetch call to API...');
+        // Fetch folder structure from the API
+        fetch(`http://localhost:8080/api/files/structure`)
+            .then(response => {
+                if (!response.ok) {
+                    // Handle HTTP errors (non-2xx status codes)
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Data received from API:', data);
+                folderStructureDiv.innerHTML = '';
+
+                // Loop through CIKs and years, and display the structure
+                for (let cik in data) {
+                    let cikDiv = document.createElement('div');
+                    cikDiv.innerHTML = `<strong>CIK: ${cik}</strong>`;
+
+                    let yearList = document.createElement('ul');
+
+                    for (let year in data[cik]) {
+                        let yearItem = document.createElement('li');
+                        yearItem.innerHTML = `<strong>Year: ${year}</strong>`;
+
+                        let fileList = document.createElement('ul');
+
+                        data[cik][year].forEach(file => {
+                            let fileItem = document.createElement('li');
+                            fileItem.innerText = file;
+                            fileList.appendChild(fileItem);
+                        });
+
+                        yearItem.appendChild(fileList);
+                        yearList.appendChild(yearItem);
+                    }
+
+                    cikDiv.appendChild(yearList);
+                    folderStructureDiv.appendChild(cikDiv);
+                }
+            })
+            .catch(error => {
+                console.error('Fetch error:', error);
+                folderStructureDiv.innerText = `Error: ${error.message}`;
+            });
+    }
+
+
+
+
+    // The function to display existing data (your previous functionality)
     function displayData() {
         const cik = document.getElementById('cik').value;
         const year = document.getElementById('year').value;
-        fetch('/display_data', {
+        fetch(`http://localhost:8080/api/display_data`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ CIK: cik, Year: year })
@@ -326,6 +410,7 @@
                 document.getElementById('html-result').innerText = `Error: ${error.message}`;
             });
     }
+
 
     function calculateMetrics() {
         const cik = document.getElementById('cik').value;

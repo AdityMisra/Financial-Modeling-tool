@@ -33,6 +33,9 @@ public class ScriptsController {
     @Value("${output.base.dir}")
     private String outputBaseDir;
 
+    @Value("${api.base.url}")
+    private String apiBaseUrl;
+
     /**
      * Extract financial tables from SEC data
      */
