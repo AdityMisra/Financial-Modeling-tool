@@ -148,7 +148,7 @@
     <div class="menu">
         <div class="menu-item" onclick="loadContent('Display Existing Data')">Display Existing Data</div>
         <div class="menu-item" onclick="loadContent('Fetch Data')">Fetch Data</div>
-        <div class="menu-item" onclick="loadContent('Generate 3 statement model')">Generate 3 statement Model</div>
+        <div class="menu-item" onclick="loadContent('Generate 3 statement Model')">Generate 3 statement Model</div>
         <div class="menu-item" onclick="loadContent('Calculate Metrics')">Calculate Metrics</div>
         <div class="menu-item" onclick="loadContent('Monte Carlo Simulations')">Monte Carlo Simulations</div>
     </div>
@@ -159,7 +159,7 @@
     </div>
 </div>
 
-<div class="footer">Copyright A2ZSolutions LLC 2025</div>
+<div class="footer">Copyright Aditya Misra (MS DS Columbia)</div>
 
 <script>
     function loadContent(option) {
@@ -230,7 +230,30 @@
 </div>
                 `;
             displayFolderStructure();
-        } else if (option === 'Calculate Metrics') {
+        }
+        else if (option === 'Generate 3 statement Model') {
+            console.log("Generating 3 statement model...");
+            contentArea.innerHTML = `
+            <h2>Generate 3 Statement Model</h2>
+            <div class="input-group">
+                <label for="cik">CIK:</label>
+                <input type="text" id="cik">
+            </div>
+            <div class="input-group">
+                <label for="year">Year:</label>
+                <input type="text" id="year">
+            </div>
+            <button class="btn" onclick="generate3StatementModel()">Generate 3 Statement Model</button>
+            <div class="html-display" id="model-metrics">
+                <p>No metrics generated yet.</p>
+            </div>
+            <div class="html-display" id="model-info">
+                <p>No information available yet.</p>
+            </div>
+        `;
+        }
+
+        else if (option === 'Calculate Metrics') {
             contentArea.innerHTML = `
                     <h2>Calculate Metrics</h2>
                     <div class="input-group">
@@ -466,6 +489,63 @@
         // Redirect to the file download URL
         window.location.href = apiUrl;
     }
+
+
+    function generate3StatementModel() {
+        const cik = document.getElementById("cik").value;
+        const year = document.getElementById("year").value;
+
+        const apiUrl = "http://localhost:8080/api/generate-3statement-model";
+        const requestData = {
+            cik: cik,
+            year: year
+        };
+
+        // Make the POST request
+        fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': '*/*'
+            },
+            body: JSON.stringify(requestData)
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Display metrics
+                    const metrics = data.metrics;
+                    const message = `
+                <h3>3 Statement Model Generated Successfully!</h3>
+                <p>Net Income: $${metrics['Net Income']}</p>
+                <p>Total Liabilities: $${metrics['Total Liabilities']}</p>
+                <p>Financing Cash Flow: $${metrics['Financing Cash Flow']}</p>
+                <p>Free Cash Flow: $${metrics['Free Cash Flow']}</p>
+                <p>Operating Cash Flow: $${metrics['Operating Cash Flow']}</p>
+                <p>EBITDA: $${metrics['EBITDA']}</p>
+                <p>Revenue: $${metrics['Revenue']}</p>
+                <p>Total Assets: $${metrics['Total Assets']}</p>
+                <p>Working Capital: $${metrics['Working Capital']}</p>
+                <p>Investing Cash Flow: $${metrics['Investing Cash Flow']}</p>
+            `;
+
+                    document.getElementById("model-metrics").innerHTML = message;
+
+                    // Inform the user to go to "Display Existing Data" to view and download the file
+                    document.getElementById("model-info").innerHTML = `
+                <p>Your 3-statement model has been generated successfully.</p>
+                <p>Go to the "Display Existing Data" section to view and download the 3-statement model file.</p>
+            `;
+                } else {
+                    alert("Failed to generate the 3-statement model.");
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert("An error occurred while generating the 3-statement model.");
+            });
+    }
+
 
 
 
