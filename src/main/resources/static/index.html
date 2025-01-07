@@ -197,12 +197,35 @@
     <label for="cik">CIK:</label>
     <input type="text" id="cik">
 </div>
+
+<!-- Dropdown for Year -->
 <div class="input-group">
     <label for="year">Year:</label>
     <input type="text" id="year">
 </div>
-<button class="btn" onclick="displayData()">Generate HTML</button>
-<div class="html-display" id="html-result">
+
+<!-- Dropdown for Statement Type -->
+<div class="input-group">
+    <label for="statement-type">Statement Type:</label>
+    <select id="statement-type">
+        <option value="balance">Balance Sheet</option>
+        <option value="cash-flow">Cash Flow</option>
+        <option value="income">Income Statement</option>
+        <option value="3statementmodel">3 Statement Model</option>
+    </select>
+</div>
+
+<!-- Button to view statement -->
+<button class="btn" onclick="viewStatement()">View Statement</button>
+
+<!-- Button to download CSV -->
+<button class="btn" onclick="downloadCSV()">Download CSV</button>
+
+<!-- Button to download file -->
+<button class="btn" onclick="download3StatementFile()">Download 3 statement model file</button>
+
+<!-- Result area -->
+<div class="html-display" id="statement-result">
     <p>No data generated yet.</p>
 </div>
                 `;
@@ -393,23 +416,57 @@
 
 
 
-    // The function to display existing data (your previous functionality)
-    function displayData() {
+    // Function to handle "View Statement" button click
+    // Function to handle "View Statement" button click
+    function viewStatement() {
         const cik = document.getElementById('cik').value;
         const year = document.getElementById('year').value;
-        fetch(`http://localhost:8080/api/display_data`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ CIK: cik, Year: year })
-        })
+        const statementType = document.getElementById('statement-type').value;
+
+        let apiUrl = '';
+        let resultDiv = document.getElementById('statement-result');
+
+        // Determine the API URL based on statement type
+        if (statementType === '3statementmodel') {
+            apiUrl = `http://localhost:8080/api/view/3statement-model/${cik}/${year}`;
+        } else {
+            apiUrl = `http://localhost:8080/api/files/view/html/${cik}/${statementType}/${year}`;
+        }
+
+        // Fetch data and display HTML in the result section
+        fetch(apiUrl)
             .then(response => response.text())
             .then(data => {
-                document.getElementById('html-result').innerHTML = data;
+                resultDiv.innerHTML = data; // Embedding the HTML returned by API
             })
             .catch(error => {
-                document.getElementById('html-result').innerText = `Error: ${error.message}`;
+                resultDiv.innerText = `Error: ${error.message}`;
             });
     }
+
+    // Function to handle "Download CSV" button click
+    function downloadCSV() {
+        const cik = document.getElementById('cik').value;
+        const year = document.getElementById('year').value;
+        const statementType = document.getElementById('statement-type').value;
+
+        let apiUrl = `http://localhost:8080/api/files/download/csv/${cik}/${statementType}/${year}`;
+
+        // Redirect to download URL for CSV file
+        window.location.href = apiUrl;
+    }
+
+    // Function to handle "Download File" button click
+    function download3StatementFile() {
+        const cik = document.getElementById('cik').value;
+        const year = document.getElementById('year').value;
+
+        let apiUrl = `http://localhost:8080/api/download/3statement-model/${cik}/${year}`;
+
+        // Redirect to the file download URL
+        window.location.href = apiUrl;
+    }
+
 
 
     function calculateMetrics() {
