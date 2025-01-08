@@ -255,57 +255,63 @@
 
         else if (option === 'Calculate Metrics') {
             contentArea.innerHTML = `
-                    <h2>Calculate Metrics</h2>
-                    <div class="input-group">
-                        <label for="cik">CIK:</label>
-                        <input type="text" id="cik">
-                    </div>
-                    <div class="input-group">
-                        <label for="year-start">Year Start:</label>
-                        <input type="text" id="year-start">
-                    </div>
-                    <div class="input-group">
-                        <label for="year-end">Year End:</label>
-                        <input type="text" id="year-end">
-                    </div>
-                    <button class="btn" onclick="calculateMetrics()">Generate Metrics</button>
-                    <div class="html-display" id="metrics-result">
-                        <p>No data generated yet.</p>
-                    </div>
-                `;
+        <h2>Calculate Metrics</h2>
+        <div class="note">
+            <p>Note: Metrics can only be calculated if the data and 3-statement model have been generated for the specified years.</p>
+        </div>
+
+        <div class="input-group">
+            <label for="cik">CIK:</label>
+            <input type="text" id="cik">
+        </div>
+        <div class="input-group">
+            <label for="year-start">Year Start:</label>
+            <input type="text" id="year-start">
+        </div>
+        <div class="input-group">
+            <label for="year-end">Year End:</label>
+            <input type="text" id="year-end">
+        </div>
+        <button class="btn" onclick="calculateMetrics()">Generate Metrics</button>
+        <div class="html-display" id="metrics-result">
+            <p>No data generated yet.</p>
+        </div>
+        <button class="btn" onclick="downloadMetrics()">Download CSV</button>
+    `;
         } else if (option === 'Monte Carlo Simulations') {
-            contentArea.innerHTML = `
-                    <h2>Monte Carlo Simulations</h2>
-                    <div class="input-group">
-                        <label for="cik">CIK:</label>
-                        <input type="text" id="cik">
-                    </div>
-                    <div class="input-group">
-                        <label for="year-start">Start Year:</label>
-                        <input type="text" id="year-start">
-                    </div>
-                    <div class="input-group">
-                        <label for="year-end">End Year:</label>
-                        <input type="text" id="year-end">
-                    </div>
-                    <div class="input-group">
-                        <label for="simulations">No. of Simulations:</label>
-                        <input type="number" id="simulations">
-                    </div>
-                    <div class="input-group">
-                        <label for="years">No. of Years:</label>
-                        <input type="number" id="years">
-                    </div>
-                    <div class="input-group">
-                        <label for="tax-rate">Tax Rate (%):</label>
-                        <input type="number" step="0.01" id="tax-rate">
-                    </div>
-                    <button class="btn" onclick="runMonteCarlo()">Run Simulations</button>
-                    <div class="html-display" id="montecarlo-result">
-                        <p>No data generated yet.</p>
-                    </div>
-                `;
+            contentArea.innerHTML = contentArea.innerHTML = `
+        <h2>Monte Carlo Simulations</h2>
+        <div class="input-group">
+            <label for="cik">CIK:</label>
+            <input type="text" id="cik">
+        </div>
+        <div class="input-group">
+            <label for="year-start">Start Year:</label>
+            <input type="text" id="year-start">
+        </div>
+        <div class="input-group">
+            <label for="year-end">End Year:</label>
+            <input type="text" id="year-end">
+        </div>
+        <div class="input-group">
+            <label for="simulations">No. of Simulations:</label>
+            <input type="number" id="simulations">
+        </div>
+        <div class="input-group">
+            <label for="years">No. of Years:</label>
+            <input type="number" id="years">
+        </div>
+        <div class="input-group">
+            <label for="tax-rate">Tax Rate (%):</label>
+            <input type="number" step="0.01" id="tax-rate">
+        </div>
+        <button class="btn" onclick="runMonteCarlo()">Run Simulations</button>
+        <div class="html-display" id="montecarlo-result">
+            <p>No data generated yet.</p>
+        </div>
+    `;
         }
+
     }
 
     function fetchData() {
@@ -551,20 +557,58 @@
 
     function calculateMetrics() {
         const cik = document.getElementById('cik').value;
-        const yearStart = document.getElementById('year-start').value;
-        const yearEnd = document.getElementById('year-end').value;
-        fetch('/calculate_metrics', {
+        const fromYear = document.getElementById('year-start').value;
+        const toYear = document.getElementById('year-end').value;
+
+        const requestBody = {
+            cik: cik,
+            fromYear: fromYear,
+            toYear: toYear
+        };
+
+        fetch("http://localhost:8080/api/calculate-metrics", {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ CIK: cik, YearStart: yearStart, YearEnd: yearEnd })
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody),
         })
-            .then(response => response.text())
+            .then(response => response.json())
             .then(data => {
-                document.getElementById('metrics-result').innerHTML = data;
+                if (data.status === 'success') {
+                    // Fetch the HTML content from the backend
+                    fetch(`http://localhost:8080/api/view/metrics/${cik}/${fromYear}/${toYear}`)
+                        .then(response => response.text())
+                        .then(html => {
+                            // Insert the HTML content into a div
+                            document.getElementById('metrics-result').innerHTML = html;
+                        })
+                        .catch(error => {
+                            console.error("Error fetching HTML:", error);
+                            document.getElementById('metrics-result').innerHTML = `<p>Error: Unable to fetch HTML content.</p>`;
+                        });
+                } else {
+                    document.getElementById('metrics-result').innerHTML = `<p>Error: ${data.message}</p>`;
+                }
             })
             .catch(error => {
-                document.getElementById('metrics-result').innerText = `Error: ${error.message}`;
+                console.error("Error calculating metrics:", error);
+                document.getElementById('metrics-result').innerHTML = `<p>Error: Unable to calculate metrics.</p>`;
             });
+    }
+
+
+    function downloadMetrics() {
+        const cik = document.getElementById('cik').value;
+        const yearStart = document.getElementById('year-start').value;
+        const yearEnd = document.getElementById('year-end').value;
+
+        if (!cik || !yearStart || !yearEnd) {
+            alert('Please fill in all fields.');
+            return;
+        }
+
+        window.location.href = `http://localhost:8080/api/download-metrics/${cik}/${yearStart}/${yearEnd}`;
     }
 
     function runMonteCarlo() {
@@ -575,26 +619,81 @@
         const years = document.getElementById('years').value;
         const taxRate = document.getElementById('tax-rate').value;
 
-        fetch('/monte_carlo', {
+        // Prepare request payload
+        const requestData = {
+            cik,
+            fromYear: yearStart,
+            toYear: yearEnd,
+            numSimulations: simulations,
+            simulationYears: years,
+            taxRate: taxRate
+        };
+
+        // Make the API request
+        fetch('http://localhost:8080/api/monte-carlo-simulation', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                CIK: cik,
-                YearStart: yearStart,
-                YearEnd: yearEnd,
-                Simulations: simulations,
-                Years: years,
-                TaxRate: taxRate
-            })
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': '*/*'
+            },
+            body: JSON.stringify(requestData)
         })
-            .then(response => response.text())
+            .then(response => response.json())
             .then(data => {
-                document.getElementById('montecarlo-result').innerHTML = data;
+                if (data.status === 'success') {
+                    // Show the view/download links
+                    const resultHTML = `
+                <p>Monte Carlo simulation already exists. Returning cached results.</p>
+                <p><a href="http://localhost:8080/api/view/simulation/${cik}" target="_blank">View Simulation HTML</a></p>
+                <p><a href="http://localhost:8080/api/download/simulation/${cik}" target="_blank">Download Simulation CSV</a></p>
+            `;
+                    document.getElementById('montecarlo-result').innerHTML = resultHTML;
+                } else {
+                    document.getElementById('montecarlo-result').innerHTML = `
+                <p>Error: ${data.message}</p>
+            `;
+                }
             })
             .catch(error => {
-                document.getElementById('montecarlo-result').innerText = `Error: ${error.message}`;
+                document.getElementById('montecarlo-result').innerHTML = `
+            <p>Error: ${error.message}</p>
+        `;
             });
     }
+
+
+
+
+    function displayMonteCarloResults(data) {
+        const resultContainer = document.getElementById("montecarlo-result");
+        resultContainer.innerHTML = `
+        <h3>Simulation Results</h3>
+        <p>${data.message}</p>
+        <table border="1">
+            <thead>
+                <tr>
+                    ${Object.keys(data.results[0]).map(header => `<th>${header}</th>`).join('')}
+                </tr>
+            </thead>
+            <tbody>
+                ${data.results.map(row => `
+                    <tr>
+                        ${Object.values(row).map(value => `<td>${value}</td>`).join('')}
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+        <h3>Download or View Results</h3>
+        <a href="${data.htmlFilePath}" target="_blank">View Simulation Results (HTML)</a><br>
+        <a href="${data.csvFilePath}" download>Download Results (CSV)</a>
+    `;
+    }
+
+    function showMonteCarloError(message) {
+        const resultContainer = document.getElementById("montecarlo-result");
+        resultContainer.innerHTML = `<p style="color: red;">${message}</p>`;
+    }
+
 </script>
 </body>
 </html>

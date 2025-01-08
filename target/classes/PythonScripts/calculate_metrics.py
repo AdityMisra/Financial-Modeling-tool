@@ -2,27 +2,24 @@ import pandas as pd
 import os
 import sys
 import json
-from typing import Tuple, List, Dict
+from typing import Tuple, List
 import logging
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-def get_metrics_file_path(cik: str, base_dir: str) -> str:
-    """Get path to company's metrics file"""
-    metrics_dir = os.path.join(base_dir,"csvs", "statement_csvs", cik, "metrics")
+def get_metrics_file_path(cik: str, from_year: int, to_year: int, base_dir: str) -> str:
+    """Get path to company's metrics file with start and end years included"""
+    metrics_dir = os.path.join(base_dir, "csvs", "statement_csvs", cik, "metrics")
     os.makedirs(metrics_dir, exist_ok=True)
-    return os.path.join(metrics_dir, f"{cik}_metrics.csv")
+    return os.path.join(metrics_dir, f"{cik}_metrics_{from_year}-{to_year}.csv")
 
 def check_data_availability(cik: str, from_year: int, to_year: int, base_dir: str) -> Tuple[bool, List[int]]:
-    """
-    Check if 3-statement models exist for requested years
-    Returns (all_available, missing_years)
-    """
+    """Check if 3-statement models exist for requested years"""
     missing_years = []
     for year in range(from_year, to_year + 1):
-        model_file = os.path.join(base_dir,"csvs", "statement_csvs", cik, str(year),
+        model_file = os.path.join(base_dir, "csvs", "statement_csvs", cik, str(year),
                                   "3statement_model", f"{cik}_3statementmodel_{year}.csv")
         if not os.path.exists(model_file):
             missing_years.append(year)
@@ -31,7 +28,6 @@ def check_data_availability(cik: str, from_year: int, to_year: int, base_dir: st
             logger.info(f"Found 3-statement model for year {year}")
 
     return len(missing_years) == 0, missing_years
-
 
 def calculate_year_metrics(data: pd.DataFrame) -> pd.DataFrame:
     """Calculate metrics within each year"""
@@ -80,22 +76,24 @@ def generate_html_output(metrics: pd.DataFrame, cik: str, from_year: int, to_yea
     <head>
         <title>Financial Metrics {cik} ({from_year}-{to_year})</title>
         <style>
-            body {{ font-family: Arial, sans-serif; margin: 20px; }}
+            body {{ font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; }}
             table {{ border-collapse: collapse; width: 100%; }}
             th, td {{ 
                 border: 1px solid #ddd; 
                 padding: 8px; 
                 text-align: right; 
             }}
-            th {{ background-color: #f2f2f2; text-align: left; }}
-            tr:nth-child(even) {{ background-color: #f9f9f9; }}
+            th {{ background-color: #2c3e50; color: white; text-align: left; }}
+            tr:nth-child(even) {{ background-color: #ecf0f1; }}
             .header {{ 
-                background-color: #4CAF50; 
+                background-color: #2C3E50; 
                 color: white; 
                 padding: 10px; 
                 margin-bottom: 20px; 
             }}
-            .metric {{ font-weight: bold; }}
+            .metric {{ font-weight: bold; color: #16a085; }}
+                h2 {{ color: #FFFFFF; }}
+            p {{ color: #FFFFFF; }}
         </style>
     </head>
     <body>
@@ -123,6 +121,7 @@ def generate_html_output(metrics: pd.DataFrame, cik: str, from_year: int, to_yea
         to_year=to_year,
         table_html=table_html
     )
+
 def calculate_metrics(cik: str, from_year: int, to_year: int, base_dir: str) -> pd.DataFrame:
     """Calculate all metrics for the specified period"""
     logger.info(f"Starting metrics calculation for CIK {cik} ({from_year}-{to_year})")
@@ -139,7 +138,7 @@ def calculate_metrics(cik: str, from_year: int, to_year: int, base_dir: str) -> 
     # Load all 3-statement models
     all_data = []
     for year in range(from_year, to_year + 1):
-        model_file = os.path.join(base_dir,"csvs", "statement_csvs", cik, str(year),
+        model_file = os.path.join(base_dir, "csvs", "statement_csvs", cik, str(year),
                                   "3statement_model", f"{cik}_3statementmodel_{year}.csv")
         try:
             df = pd.read_csv(model_file)
@@ -157,7 +156,7 @@ def calculate_metrics(cik: str, from_year: int, to_year: int, base_dir: str) -> 
     metrics = calculate_cross_year_metrics(metrics)
 
     # Save results
-    metrics_file = get_metrics_file_path(cik, base_dir)
+    metrics_file = get_metrics_file_path(cik, from_year, to_year, base_dir)
     metrics.to_csv(metrics_file, index=False)
     logger.info(f"Saved CSV metrics to {metrics_file}")
 
@@ -202,8 +201,8 @@ def main():
         # Print summary
         print("\nMetrics calculation completed successfully!")
         print(f"\nResults saved to:")
-        print(f"CSV: {get_metrics_file_path(cik, input_dir)}")
-        print(f"HTML: {get_metrics_file_path(cik, input_dir).replace('.csv', '.html')}")
+        print(f"CSV: {get_metrics_file_path(cik, from_year, to_year, input_dir)}")
+        print(f"HTML: {get_metrics_file_path(cik, from_year, to_year, input_dir).replace('.csv', '.html')}")
 
         print("\nMetrics Summary:")
         print(metrics.describe())

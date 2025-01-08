@@ -1,12 +1,15 @@
 package org.example.controller;
 
+import jakarta.validation.Valid;
 import org.example.bo.ScriptsService;
+import org.example.utils.CSVUtils;
 import org.example.vo.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +24,8 @@ import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static org.example.utils.CSVUtils.readSimulationResults;
 
 @RestController
 @RequestMapping("/api")
@@ -232,103 +237,69 @@ public class ScriptsController {
         }
     }
 
-    @GetMapping("/view-metrics/{cik}")
-    public ResponseEntity<Resource> viewMetricsCsv(@PathVariable String cik) {
-        try {
-            Path filePath = Paths.get(System.getProperty("user.dir"), outputBaseDir,"csvs",
-                    "statement_csvs", cik, "metrics", cik + "_all_metrics.csv");
+    @GetMapping("/view/metrics/{cik}/{fromYear}/{toYear}")
+    public ResponseEntity<String> viewMetrics(
+            @PathVariable String cik,
+            @PathVariable Integer fromYear,
+            @PathVariable Integer toYear) {
 
+        try {
+            String html = scriptsService.getMetricsAsHtml(cik, fromYear, toYear);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.TEXT_HTML)
+                    .body(html);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
+        }
+    }
+
+
+    @GetMapping("/download-metrics/{cik}/{fromYear}/{toYear}")
+    public ResponseEntity<Resource> downloadMetricsCsv(
+            @PathVariable String cik,
+            @PathVariable int fromYear,
+            @PathVariable int toYear) {
+        try {
+            // Construct the file name using the CIK and year range
+            String fileName = cik + "_metrics_" + fromYear + "-" + toYear + ".csv";
+            // Construct the file path
+            Path filePath = Paths.get(
+                    System.getProperty("user.dir"),
+                    outputBaseDir,
+                    "csvs",
+                    "statement_csvs",
+                    cik,
+                    "metrics",
+                    fileName
+            );
+
+            // Load the resource
             Resource resource = new UrlResource(filePath.toUri());
 
-            if (resource.exists()) {
+            if (resource.exists() && resource.isReadable()) {
                 return ResponseEntity.ok()
                         .contentType(MediaType.parseMediaType("text/csv"))
                         .header(HttpHeaders.CONTENT_DISPOSITION,
-                                "attachment; filename=\"" + cik + "_metrics.csv\"")
+                                "attachment; filename=\"" + fileName + "\"")
                         .body(resource);
             } else {
                 return ResponseEntity.notFound().build();
             }
         } catch (IOException e) {
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
     @PostMapping("/monte-carlo-simulation")
-    public ResponseEntity<MonteCarloResponse> runMonteCarloSimulation(@RequestBody MonteCarloRequest request) {
+    public ResponseEntity<MonteCarloResponse> runSimulation(@Valid @RequestBody MonteCarloRequest request) {
         try {
-            // First check if metrics exist
-            String metricsPath = Paths.get(outputBaseDir, "csvs", "statement_csvs",
-                    request.getCik(), "metrics", request.getCik() + "_metrics.csv").toString();
-
-            if (!Files.exists(Paths.get(metricsPath))) {
-                return ResponseEntity.badRequest().body(
-                        new MonteCarloResponse(
-                                "error",
-                                "Metrics file not found. Please calculate metrics first.",
-                                null,
-                                null
-                        )
-                );
-            }
-
-            return ResponseEntity.ok(scriptsService.runMonteCarloSimulation(
-                    request.getCik(),
-                    request.getNumSimulations(),
-                    request.getSimulationYears(),
-                    request.getTaxRate()
-            ));
+            // Use the `ScriptsService` instance to call `runMonteCarloSimulation`
+            MonteCarloResponse response = scriptsService.runMonteCarloSimulation(request);
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(
-                    new MonteCarloResponse(
-                            "error",
-                            e.getMessage(),
-                            null,
-                            null
-                    )
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                    new MonteCarloResponse("error", e.getMessage(), null, null)
             );
-        }
-    }
-
-    @GetMapping("/view/simulation/{cik}")
-    public ResponseEntity<Resource> viewSimulationResults(@PathVariable String cik) {
-        try {
-            Path filePath = Paths.get(System.getProperty("user.dir"), outputBaseDir,
-                    "statement_csvs", cik, "simulations", cik + "_monte_carlo_results.html");
-
-            Resource resource = new UrlResource(filePath.toUri());
-
-            if (resource.exists()) {
-                return ResponseEntity.ok()
-                        .contentType(MediaType.TEXT_HTML)
-                        .body(resource);
-            } else {
-                return ResponseEntity.notFound().build();
-            }
-        } catch (IOException e) {
-            return ResponseEntity.notFound().build();
-        }
-    }
-
-    @GetMapping("/download/simulation/{cik}")
-    public ResponseEntity<Resource> downloadSimulationResults(@PathVariable String cik) {
-        try {
-            Path filePath = Paths.get(System.getProperty("user.dir"), outputBaseDir,
-                    "statement_csvs", cik, "simulations", cik + "_monte_carlo_results.csv");
-
-            Resource resource = new UrlResource(filePath.toUri());
-
-            if (resource.exists()) {
-                return ResponseEntity.ok()
-                        .contentType(MediaType.parseMediaType("text/csv"))
-                        .header(HttpHeaders.CONTENT_DISPOSITION,
-                                "attachment; filename=\"" + cik + "_monte_carlo_results.csv\"")
-                        .body(resource);
-            } else {
-                return ResponseEntity.notFound().build();
-            }
-        } catch (IOException e) {
-            return ResponseEntity.notFound().build();
         }
     }
 }
