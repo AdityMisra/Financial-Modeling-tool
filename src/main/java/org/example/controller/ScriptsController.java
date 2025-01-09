@@ -302,4 +302,29 @@ public class ScriptsController {
             );
         }
     }
+
+    @GetMapping("/view/simulation/html/{cik}/{fileName}")
+    public ResponseEntity<String> getMonteCarloHtml(
+            @PathVariable String cik,
+            @PathVariable String fileName) {
+        try {
+            // Construct the file path
+            String filePath = String.format("output/csvs/statement_csvs/%s/simulations/%s", cik, fileName);
+            System.out.println("Looking for file at: " + filePath);
+
+            // Check if the file exists
+            Path path = Paths.get(filePath);
+            if (!Files.exists(path)) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("File not found.");
+            }
+
+            // Read file content
+            String content = Files.readString(path);
+            return ResponseEntity.ok().contentType(MediaType.TEXT_HTML).body(content);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error retrieving HTML: " + e.getMessage());
+        }
+    }
 }

@@ -279,8 +279,10 @@
         <button class="btn" onclick="downloadMetrics()">Download CSV</button>
     `;
         } else if (option === 'Monte Carlo Simulations') {
-            contentArea.innerHTML = contentArea.innerHTML = `
+            contentArea.innerHTML = `
         <h2>Monte Carlo Simulations</h2>
+
+        <!-- Input Fields -->
         <div class="input-group">
             <label for="cik">CIK:</label>
             <input type="text" id="cik">
@@ -305,7 +307,11 @@
             <label for="tax-rate">Tax Rate (%):</label>
             <input type="number" step="0.01" id="tax-rate">
         </div>
+
+        <!-- Button to trigger simulation -->
         <button class="btn" onclick="runMonteCarlo()">Run Simulations</button>
+
+        <!-- Display results -->
         <div class="html-display" id="montecarlo-result">
             <p>No data generated yet.</p>
         </div>
@@ -612,86 +618,78 @@
     }
 
     function runMonteCarlo() {
-        const cik = document.getElementById('cik').value;
-        const yearStart = document.getElementById('year-start').value;
-        const yearEnd = document.getElementById('year-end').value;
-        const simulations = document.getElementById('simulations').value;
-        const years = document.getElementById('years').value;
-        const taxRate = document.getElementById('tax-rate').value;
+        const cik = document.getElementById('cik').value.trim();
+        const yearStart = document.getElementById('year-start').value.trim();
+        const yearEnd = document.getElementById('year-end').value.trim();
+        const simulations = document.getElementById('simulations').value.trim();
+        const years = document.getElementById('years').value.trim();
+        const taxRate = document.getElementById('tax-rate').value.trim();
+        const resultDiv = document.getElementById('montecarlo-result');
 
-        // Prepare request payload
+        // Validate fields
+        if (!cik || !yearStart || !yearEnd || !simulations || !years || !taxRate) {
+            resultDiv.innerHTML = `<p style="color: red;">Error: All fields are required.</p>`;
+            return;
+        }
+
+        resultDiv.innerHTML = '<p>Loading...</p>'; // Display loading message
+
+        // Request payload
         const requestData = {
             cik,
             fromYear: yearStart,
             toYear: yearEnd,
-            numSimulations: simulations,
-            simulationYears: years,
-            taxRate: taxRate
+            numSimulations: parseInt(simulations, 10),
+            simulationYears: parseInt(years, 10),
+            taxRate: parseFloat(taxRate)
         };
 
-        // Make the API request
+        // POST request to run Monte Carlo simulations
         fetch('http://localhost:8080/api/monte-carlo-simulation', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': '*/*'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(requestData)
         })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Failed to run simulation: ${response.statusText}`);
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.status === 'success') {
-                    // Show the view/download links
-                    const resultHTML = `
-                <p>Monte Carlo simulation already exists. Returning cached results.</p>
-                <p><a href="http://localhost:8080/api/view/simulation/${cik}" target="_blank">View Simulation HTML</a></p>
-                <p><a href="http://localhost:8080/api/download/simulation/${cik}" target="_blank">Download Simulation CSV</a></p>
-            `;
-                    document.getElementById('montecarlo-result').innerHTML = resultHTML;
+                    // Fetch and display the HTML results
+                    const htmlFilePath = `http://localhost:8080/api/view/simulation/html/${cik}/${cik}_monte_carlo_results_${yearStart}-${yearEnd}.html`;
+
+                    fetch(htmlFilePath)
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Failed to fetch results HTML.');
+                            }
+                            return response.text();
+                        })
+                        .then(htmlContent => {
+                            resultDiv.innerHTML = `
+                            <h3>Monte Carlo Simulation Results</h3>
+                            <div>${htmlContent}</div>
+                            <button class="btn" onclick="downloadMonteCarloCsv('${cik}', '${yearStart}', '${yearEnd}')">Download CSV</button>
+                        `;
+                        })
+                        .catch(error => {
+                            resultDiv.innerHTML = `<p style="color: red;">Error fetching results HTML: ${error.message}</p>`;
+                        });
                 } else {
-                    document.getElementById('montecarlo-result').innerHTML = `
-                <p>Error: ${data.message}</p>
-            `;
+                    resultDiv.innerHTML = `<p style="color: red;">Error: ${data.message}</p>`;
                 }
             })
             .catch(error => {
-                document.getElementById('montecarlo-result').innerHTML = `
-            <p>Error: ${error.message}</p>
-        `;
+                resultDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
             });
     }
 
-
-
-
-    function displayMonteCarloResults(data) {
-        const resultContainer = document.getElementById("montecarlo-result");
-        resultContainer.innerHTML = `
-        <h3>Simulation Results</h3>
-        <p>${data.message}</p>
-        <table border="1">
-            <thead>
-                <tr>
-                    ${Object.keys(data.results[0]).map(header => `<th>${header}</th>`).join('')}
-                </tr>
-            </thead>
-            <tbody>
-                ${data.results.map(row => `
-                    <tr>
-                        ${Object.values(row).map(value => `<td>${value}</td>`).join('')}
-                    </tr>
-                `).join('')}
-            </tbody>
-        </table>
-        <h3>Download or View Results</h3>
-        <a href="${data.htmlFilePath}" target="_blank">View Simulation Results (HTML)</a><br>
-        <a href="${data.csvFilePath}" download>Download Results (CSV)</a>
-    `;
-    }
-
-    function showMonteCarloError(message) {
-        const resultContainer = document.getElementById("montecarlo-result");
-        resultContainer.innerHTML = `<p style="color: red;">${message}</p>`;
+    function downloadMonteCarloCsv(cik, yearStart, yearEnd) {
+        const csvFilePath = `http://localhost:8080/api/view/simulation/csv/${cik}/${cik}_monte_carlo_results_${yearStart}-${yearEnd}.csv`;
+        window.location.href = csvFilePath;
     }
 
 </script>
