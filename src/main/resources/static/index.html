@@ -138,6 +138,43 @@
             border-radius: 5px;
             background-color: #F4F6F7;
         }
+
+        .styled-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 25px 0;
+            font-size: 1em;
+            font-family: Arial, sans-serif;
+            text-align: left;
+        }
+
+        .styled-table thead tr {
+            background-color: #34495E;
+            color: #FFFFFF;
+            text-align: left;
+        }
+
+        .styled-table th, .styled-table td {
+            padding: 12px 15px;
+            border: 1px solid #BDC3C7;
+            text-align: center;
+        }
+
+        .styled-table tbody tr {
+            border-bottom: 1px solid #BDC3C7;
+        }
+
+        .styled-table tbody tr:nth-of-type(even) {
+            background-color: #F4F6F7;
+        }
+
+        .styled-table tbody tr:last-of-type {
+            border-bottom: 2px solid #34495E;
+        }
+
+        .styled-table tbody tr:hover {
+            background-color: #D5D8DC;
+        }
     </style>
 </head>
 <body>
@@ -280,6 +317,7 @@
     `;
         } else if (option === 'Monte Carlo Simulations') {
             contentArea.innerHTML = `
+    <div class="content" id="content-area">
         <h2>Monte Carlo Simulations</h2>
 
         <!-- Input Fields -->
@@ -307,14 +345,13 @@
             <label for="tax-rate">Tax Rate (%):</label>
             <input type="number" step="0.01" id="tax-rate">
         </div>
-
-        <!-- Button to trigger simulation -->
         <button class="btn" onclick="runMonteCarlo()">Run Simulations</button>
 
-        <!-- Display results -->
+        <!-- Result Section -->
         <div class="html-display" id="montecarlo-result">
             <p>No data generated yet.</p>
         </div>
+    </div>
     `;
         }
 
@@ -618,76 +655,92 @@
     }
 
     function runMonteCarlo() {
-        const cik = document.getElementById('cik').value.trim();
-        const yearStart = document.getElementById('year-start').value.trim();
-        const yearEnd = document.getElementById('year-end').value.trim();
-        const simulations = document.getElementById('simulations').value.trim();
-        const years = document.getElementById('years').value.trim();
-        const taxRate = document.getElementById('tax-rate').value.trim();
-        const resultDiv = document.getElementById('montecarlo-result');
+        const cik = document.getElementById('cik').value;
+        const yearStart = document.getElementById('year-start').value;
+        const yearEnd = document.getElementById('year-end').value;
+        const simulations = document.getElementById('simulations').value;
+        const years = document.getElementById('years').value;
+        const taxRate = document.getElementById('tax-rate').value;
 
-        // Validate fields
-        if (!cik || !yearStart || !yearEnd || !simulations || !years || !taxRate) {
-            resultDiv.innerHTML = `<p style="color: red;">Error: All fields are required.</p>`;
-            return;
-        }
-
-        resultDiv.innerHTML = '<p>Loading...</p>'; // Display loading message
-
-        // Request payload
         const requestData = {
             cik,
             fromYear: yearStart,
             toYear: yearEnd,
-            numSimulations: parseInt(simulations, 10),
-            simulationYears: parseInt(years, 10),
-            taxRate: parseFloat(taxRate)
+            numSimulations: simulations,
+            simulationYears: years,
+            taxRate
         };
 
-        // POST request to run Monte Carlo simulations
+        const resultDiv = document.getElementById('montecarlo-result');
+        resultDiv.innerHTML = '<p>Loading...</p>'; // Show loading spinner
+
         fetch('http://localhost:8080/api/monte-carlo-simulation', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(requestData)
+            body: JSON.stringify(requestData),
         })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`Failed to run simulation: ${response.statusText}`);
-                }
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
-                if (data.status === 'success') {
-                    // Fetch and display the HTML results
-                    const htmlFilePath = `http://localhost:8080/api/view/simulation/html/${cik}/${cik}_monte_carlo_results_${yearStart}-${yearEnd}.html`;
-
-                    fetch(htmlFilePath)
-                        .then(response => {
-                            if (!response.ok) {
-                                throw new Error('Failed to fetch results HTML.');
-                            }
-                            return response.text();
-                        })
-                        .then(htmlContent => {
-                            resultDiv.innerHTML = `
-                            <h3>Monte Carlo Simulation Results</h3>
-                            <div>${htmlContent}</div>
-                            <button class="btn" onclick="downloadMonteCarloCsv('${cik}', '${yearStart}', '${yearEnd}')">Download CSV</button>
-                        `;
-                        })
-                        .catch(error => {
-                            resultDiv.innerHTML = `<p style="color: red;">Error fetching results HTML: ${error.message}</p>`;
-                        });
+                console.log('API Response:', data); // Log API response for debugging
+                if (data.status === 'success' && Array.isArray(data.simulationResults) && data.simulationResults.length > 0) {
+                    // Pass simulation results to display function
+                    displayMonteCarloResults(data.simulationResults);
                 } else {
-                    resultDiv.innerHTML = `<p style="color: red;">Error: ${data.message}</p>`;
+                    resultDiv.innerHTML = `<p>No results available. Try running the simulation again.</p>`;
                 }
             })
             .catch(error => {
-                resultDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+                console.error('Error fetching simulation results:', error);
+                resultDiv.innerHTML = `<p style="color:red;">Error: ${error.message}</p>`;
             });
     }
 
-    function downloadMonteCarloCsv(cik, yearStart, yearEnd) {
+
+    function formatNumber(value) {
+        if (typeof value === 'number') {
+            return value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+        return value;
+    }
+
+    function displayMonteCarloResults(data) {
+        const resultContainer = document.getElementById('montecarlo-result');
+
+        if (!Array.isArray(data) || data.length === 0) {
+            resultContainer.innerHTML = `<p>No simulation results to display.</p>`;
+            return;
+        }
+
+        const headers = Object.keys(data[0]); // Dynamically get headers from the first object
+        const rows = data.map(row => {
+            return `
+            <tr>
+                ${headers.map(header => `<td>${formatNumber(row[header])}</td>`).join('')}
+            </tr>
+        `;
+        });
+
+        resultContainer.innerHTML = `
+        <h3>Monte Carlo Simulation Results</h3>
+        <table class="styled-table">
+            <thead>
+                <tr>
+                    ${headers.map(header => `<th>${header}</th>`).join('')}
+                </tr>
+            </thead>
+            <tbody>
+                ${rows.join('')}
+            </tbody>
+        </table>
+        <button class="btn" onclick="downloadMonteCarloCsv()">Download CSV</button>
+    `;
+    }
+
+    function downloadMonteCarloCsv() {
+        const cik = document.getElementById('cik').value;
+        const yearStart = document.getElementById('year-start').value;
+        const yearEnd = document.getElementById('year-end').value;
+
         const csvFilePath = `http://localhost:8080/api/view/simulation/csv/${cik}/${cik}_monte_carlo_results_${yearStart}-${yearEnd}.csv`;
         window.location.href = csvFilePath;
     }
