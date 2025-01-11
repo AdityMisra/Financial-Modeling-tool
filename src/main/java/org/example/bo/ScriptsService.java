@@ -6,7 +6,6 @@ import org.example.vo.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -22,13 +21,7 @@ import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 
-import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVParser;
-import org.apache.commons.csv.CSVRecord;
-import org.springframework.web.bind.annotation.PostMapping;
-
 import java.io.Reader;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -929,6 +922,106 @@ public class ScriptsService {
             );
         }
     }
+
+    public List<String> listCiksWithMetrics() throws IOException {
+        Path basePath = Paths.get(outputBaseDir, "csvs", "statement_csvs");
+        if (!Files.exists(basePath)) throw new FileNotFoundException("Base directory not found!");
+
+        // Return a list of CIK directories with a "metrics" subfolder
+        try (Stream<Path> paths = Files.walk(basePath, 1)) {
+            return paths.filter(path -> Files.isDirectory(path.resolve("metrics")))
+                    .map(path -> path.getFileName().toString())
+                    .collect(Collectors.toList());
+        }
+    }
+
+    public List<String> listMetricFilesForCik(String cik) throws IOException {
+        Path metricsDir = Paths.get(outputBaseDir, "csvs", "statement_csvs", cik, "metrics");
+        if (!Files.exists(metricsDir)) throw new FileNotFoundException("Metrics directory not found for CIK: " + cik);
+
+        // Return a list of all CSV files in the metrics folder
+        try (Stream<Path> paths = Files.list(metricsDir)) {
+            return paths.filter(path -> path.toString().endsWith(".csv"))
+                    .map(path -> path.getFileName().toString())
+                    .collect(Collectors.toList());
+        }
+    }
+
+    public WaccCalculationResponse runWaccCalculation(WaccCalculationRequest request) {
+        try {
+            // Paths
+            String cik = request.getCik();
+            String ticker = request.getTicker(); // Use ticker here
+            Path metricsFilePath = Paths.get(outputBaseDir, "csvs", "statement_csvs", cik, "metrics", request.getMetricFile());
+            Path waccDir = Paths.get(outputBaseDir, "csvs", "statement_csvs", cik, "wacc");
+            Files.createDirectories(waccDir);
+
+            // Output WACC file path
+            String outputFileName = cik + "_wacc_results_" + request.getMetricFile().replace("metrics_", "");
+            Path waccFilePath = waccDir.resolve(outputFileName);
+
+            // Python script path
+            Path scriptPath = Paths.get(System.getProperty("user.dir"), "src", "main", "resources", "PythonScripts", "wacc_calculation.py");
+            if (!Files.exists(scriptPath)) throw new FileNotFoundException("Python script not found at: " + scriptPath);
+
+            // Command for ProcessBuilder
+            String[] command = {
+                    "python3",
+                    scriptPath.toString(),
+                    metricsFilePath.toString(),
+                    waccFilePath.toString(),
+                    request.getCik(), // CIK for output file naming consistency
+                    request.getTicker(), // Pass ticker to the Python script
+                    request.getRiskFreeRate().toString(),
+                    request.getMarketReturn().toString(),
+                    request.getTaxRate().toString(),
+                    request.getStartDate(),
+                    request.getEndDate(),
+                    request.getCostOfDebt().toString()
+            };
+
+            // Execute the Python script
+            Process process = new ProcessBuilder(command).start();
+
+            // Capture output
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    System.out.println("[PYTHON OUTPUT]: " + line);
+                }
+            }
+
+            // Wait for process to complete
+            int exitCode = process.waitFor();
+            if (exitCode != 0) throw new RuntimeException("Python script failed with exit code: " + exitCode);
+
+            if (!Files.exists(waccFilePath)) throw new RuntimeException("WACC results file not generated!");
+
+            return new WaccCalculationResponse("success", "WACC calculation completed successfully.", waccFilePath.toString(), null);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new WaccCalculationResponse("error", "Error during WACC calculation: " + e.getMessage(), null, null);
+        }
+    }
+
+    public List<String> getMetricFiles(String cik) throws IOException {
+        String metricsDirPath = Paths.get(outputBaseDir, "csvs", "statement_csvs", cik, "metrics").toString();
+        Path metricsDir = Paths.get(metricsDirPath);
+
+        if (!Files.exists(metricsDir)) {
+            throw new FileNotFoundException("Metrics directory does not exist for CIK: " + cik);
+        }
+
+        try (Stream<Path> paths = Files.list(metricsDir)) {
+            return paths
+                    .filter(Files::isRegularFile)
+                    .map(Path::getFileName)
+                    .map(Path::toString)
+                    .filter(fileName -> fileName.endsWith(".csv"))
+                    .collect(Collectors.toList());
+        }
+    }
+
 
 }
 

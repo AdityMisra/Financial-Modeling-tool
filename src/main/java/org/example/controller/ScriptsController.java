@@ -2,7 +2,6 @@ package org.example.controller;
 
 import jakarta.validation.Valid;
 import org.example.bo.ScriptsService;
-import org.example.utils.CSVUtils;
 import org.example.vo.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,8 +23,6 @@ import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import static org.example.utils.CSVUtils.readSimulationResults;
 
 @RestController
 @RequestMapping("/api")
@@ -327,4 +324,58 @@ public class ScriptsController {
                     .body("Error retrieving HTML: " + e.getMessage());
         }
     }
+
+    @GetMapping("/api/metrics/files/{cik}")
+    public ResponseEntity<List<String>> getMetricFiles(@PathVariable String cik) {
+        try {
+            List<String> metricFiles = scriptsService.getMetricFiles(cik);
+            return ResponseEntity.ok(metricFiles);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
+
+    @PostMapping("/run-wacc")
+    public ResponseEntity<WaccCalculationResponse> runWacc(@Valid @RequestBody WaccCalculationRequest request) {
+        try {
+            // Validate ticker
+            if (request.getTicker() == null || request.getTicker().isEmpty()) {
+                return ResponseEntity.badRequest().body(
+                        new WaccCalculationResponse("error", "Ticker is required for WACC calculation", null, null)
+                );
+            }
+
+            WaccCalculationResponse response = scriptsService.runWaccCalculation(request);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                    new WaccCalculationResponse("error", e.getMessage(), null, null)
+            );
+        }
+    }
+
+    @GetMapping("/list-ciks")
+    public ResponseEntity<List<String>> getCiksWithMetrics() {
+        try {
+            // List all CIKs that have a "metrics" folder
+            List<String> ciks = scriptsService.listCiksWithMetrics();
+            return ResponseEntity.ok(ciks);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
+    @GetMapping("/list-metric-files/{cik}")
+    public ResponseEntity<List<String>> getMetricFilesForCik(@PathVariable String cik) {
+        try {
+            // List all metric files for a specific CIK
+            List<String> metricFiles = scriptsService.listMetricFilesForCik(cik);
+            return ResponseEntity.ok(metricFiles);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
+
 }
