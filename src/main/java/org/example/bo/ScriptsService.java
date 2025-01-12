@@ -957,7 +957,7 @@ public class ScriptsService {
             Files.createDirectories(waccDir);
 
             // Output WACC file path
-            String outputFileName = cik + "_wacc_results_" + request.getMetricFile().replace("metrics_", "");
+            String outputFileName = cik + "_wacc_results_" + request.getMetricFile().replace("^.*metrics_", "");
             Path waccFilePath = waccDir.resolve(outputFileName);
 
             // Python script path
@@ -1019,6 +1019,19 @@ public class ScriptsService {
                     .map(Path::toString)
                     .filter(fileName -> fileName.endsWith(".csv"))
                     .collect(Collectors.toList());
+        }
+    }
+
+    public List<String> getWaccCsvContent(String filePath) throws IOException {
+        Path csvFile = Paths.get(filePath);
+
+        if (!Files.exists(csvFile)) {
+            throw new FileNotFoundException("CSV file not found at: " + filePath);
+        }
+
+        // Read all lines from the CSV
+        try (Stream<String> lines = Files.lines(csvFile)) {
+            return lines.collect(Collectors.toList()); // Collect as a list of strings
         }
     }
 

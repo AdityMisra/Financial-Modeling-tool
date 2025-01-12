@@ -16,6 +16,8 @@ import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -377,5 +379,59 @@ public class ScriptsController {
         }
     }
 
+
+    @GetMapping("/view-wacc-results")
+    public ResponseEntity<String> viewWaccResults(@RequestParam String filePath) {
+        try {
+            Path path = Paths.get(filePath);
+            if (!Files.exists(path)) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("File not found: " + filePath);
+            }
+
+            // Read the CSV file and convert it into an HTML table
+            List<String> lines = Files.readAllLines(path);
+            StringBuilder htmlTable = new StringBuilder("<table class='styled-table'><thead><tr>");
+            String[] headers = lines.get(0).split(",");
+            for (String header : headers) {
+                htmlTable.append("<th>").append(header).append("</th>");
+            }
+            htmlTable.append("</tr></thead><tbody>");
+            for (int i = 1; i < lines.size(); i++) {
+                htmlTable.append("<tr>");
+                String[] cells = lines.get(i).split(",");
+                for (String cell : cells) {
+                    htmlTable.append("<td>").append(cell).append("</td>");
+                }
+                htmlTable.append("</tr>");
+            }
+            htmlTable.append("</tbody></table>");
+
+            return ResponseEntity.ok(htmlTable.toString());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error generating WACC view: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/download-wacc")
+    public ResponseEntity<Resource> downloadWaccFile(@RequestParam String filePath) {
+        try {
+            Path path = Paths.get(filePath);
+            if (!Files.exists(path)) {
+                throw new FileNotFoundException("File not found: " + filePath);
+            }
+
+            // Load the file as a resource
+            Resource resource = new UrlResource(path.toUri());
+            String fileName = path.getFileName().toString();
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
+                    .body(resource);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(null);
+        }
+    }
 
 }

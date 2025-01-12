@@ -188,6 +188,7 @@
         <div class="menu-item" onclick="loadContent('Generate 3 statement Model')">Generate 3 statement Model</div>
         <div class="menu-item" onclick="loadContent('Calculate Metrics')">Calculate Metrics</div>
         <div class="menu-item" onclick="loadContent('Monte Carlo Simulations')">Monte Carlo Simulations</div>
+        <div class="menu-item" onclick="loadContent('WACC Calculations')">WACC Calculations</div>
     </div>
 
     <div class="content" id="content-area">
@@ -267,8 +268,7 @@
 </div>
                 `;
             displayFolderStructure();
-        }
-        else if (option === 'Generate 3 statement Model') {
+        } else if (option === 'Generate 3 statement Model') {
             console.log("Generating 3 statement model...");
             contentArea.innerHTML = `
             <h2>Generate 3 Statement Model</h2>
@@ -288,9 +288,7 @@
                 <p>No information available yet.</p>
             </div>
         `;
-        }
-
-        else if (option === 'Calculate Metrics') {
+        } else if (option === 'Calculate Metrics') {
             contentArea.innerHTML = `
         <h2>Calculate Metrics</h2>
         <div class="note">
@@ -357,8 +355,67 @@
         </div>
     </div>
     `;
-        }
+        } else if (option === 'WACC Calculations') {
+            contentArea.innerHTML = `
+        <h2>Weighted Average Cost of Capital (WACC) Calculations</h2>
+        <div class="input-group">
+            <label for="cik-dropdown">Select CIK:</label>
+            <select id="cik-dropdown" name="cik-dropdown">
+                <option value="">--Select CIK--</option>
+            </select>
+        </div>
+        <div class="input-group">
+            <label for="metric-dropdown">Select Metric File:</label>
+            <select id="metric-dropdown" name="metric-dropdown">
+                <option value="">--Select Metric File--</option>
+            </select>
+        </div>
+        <div class="input-group">
+            <label for="ticker">Ticker:</label>
+            <input type="text" id="ticker" placeholder="e.g., APD">
+        </div>
+        <div class="input-group">
+            <label for="risk-free-rate">Risk-Free Rate:</label>
+            <input type="text" id="risk-free-rate" placeholder="e.g., 0.03">
+        </div>
+        <div class="input-group">
+            <label for="market-return">Market Return:</label>
+            <input type="text" id="market-return" placeholder="e.g., 0.10">
+        </div>
+        <div class="input-group">
+            <label for="tax-rate">Tax Rate:</label>
+            <input type="text" id="tax-rate" placeholder="e.g., 0.25">
+        </div>
+        <div class="input-group">
+            <label for="cost-of-debt">Cost of Debt:</label>
+            <input type="text" id="cost-of-debt" placeholder="e.g., 0.04">
+        </div>
+        <div class="input-group">
+            <label for="start-date">Start Date (YYYY-MM-DD):</label>
+            <input type="date" id="start-date" placeholder="yyyy-mm-dd">
+        </div>
+        <div class="input-group">
+            <label for="end-date">End Date (YYYY-MM-DD):</label>
+            <input type="date" id="end-date" placeholder="yyyy-mm-dd">
+        </div>
+        <button class="btn" onclick="calculateWACC()">Calculate WACC</button>
+        <button class="btn" onclick="resetWaccInputs()">Reset Form</button>
+        <div class="html-display" id="wacc-result">
+            <p>No data generated yet.</p>
+        </div>
+    `;
 
+            // Fetch CIKs after content is rendered
+            fetchCiks();
+
+            //Restore Inputs
+            restoreWaccInputs();
+
+            const cikDropdown = document.getElementById('cik-dropdown');
+            if (cikDropdown) {
+                cikDropdown.addEventListener('change', fetchMetricFiles);
+            }
+        }
     }
 
     function fetchData() {
@@ -378,8 +435,8 @@
         // Send the POST request with proper payload
         fetch('http://localhost:8080/api/extractTables', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ciks: ciks, years: years })
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ciks: ciks, years: years})
         })
             .then(response => response.json())  // Expecting JSON response
             .then(data => {
@@ -413,10 +470,10 @@
     }
 
 
-    document.addEventListener("DOMContentLoaded", function() {
+    document.addEventListener("DOMContentLoaded", function () {
         console.log('DOM fully loaded');
 
-        const checkFolderStructure = setInterval(function() {
+        const checkFolderStructure = setInterval(function () {
             const folderStructureDiv = document.getElementById('folder-structure');
             if (folderStructureDiv) {
                 console.log('Element found, calling displayFolderStructure...');
@@ -488,11 +545,7 @@
                 folderStructureDiv.innerText = `Error: ${error.message}`;
             });
     }
-
-
-
-
-    // Function to handle "View Statement" button click
+    
     // Function to handle "View Statement" button click
     function viewStatement() {
         const cik = document.getElementById('cik').value;
@@ -600,8 +653,6 @@
     }
 
 
-
-
     function calculateMetrics() {
         const cik = document.getElementById('cik').value;
         const fromYear = document.getElementById('year-start').value;
@@ -680,7 +731,7 @@
 
         fetch('http://localhost:8080/api/monte-carlo-simulation', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(requestData),
         })
             .then(response => response.json())
@@ -702,7 +753,7 @@
 
     function formatNumber(value) {
         if (typeof value === 'number') {
-            return value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            return value.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
         }
         return value;
     }
@@ -747,6 +798,132 @@
 
         const csvFilePath = `http://localhost:8080/api/view/simulation/csv/${cik}/${cik}_monte_carlo_results_${yearStart}-${yearEnd}.csv`;
         window.location.href = csvFilePath;
+    }
+
+    // Fetch available CIKs
+    document.addEventListener('DOMContentLoaded', function () {
+        fetchCiks();
+
+        const cikDropdown = document.getElementById('cik-dropdown');
+        if (cikDropdown) {
+            cikDropdown.addEventListener('change', fetchMetricFiles);
+        }
+    });
+
+    function fetchCiks() {
+        const cikDropdown = document.getElementById('cik-dropdown');
+        if (!cikDropdown) {
+            console.error('CIK dropdown element not found!');
+            return;
+        }
+
+        fetch('http://localhost:8080/api/list-ciks')
+            .then(response => response.json())
+            .then(data => {
+                cikDropdown.innerHTML = '<option value="">--Select CIK--</option>'; // Reset dropdown
+                data.forEach(cik => {
+                    cikDropdown.innerHTML += `<option value="${cik}">${cik}</option>`;
+                });
+            })
+            .catch(error => {
+                console.error('Error fetching CIKs:', error);
+            });
+    }
+
+    function fetchMetricFiles() {
+        const cikDropdown = document.getElementById('cik-dropdown');
+        const selectedCik = cikDropdown.value;
+
+        const metricDropdown = document.getElementById('metric-dropdown');
+        if (!selectedCik || !metricDropdown) {
+            console.error('Metric dropdown element not found or CIK not selected!');
+            return;
+        }
+
+        fetch(`http://localhost:8080/api/list-metric-files/${selectedCik}`)
+            .then(response => response.json())
+            .then(data => {
+                metricDropdown.innerHTML = '<option value="">--Select Metric File--</option>'; // Reset dropdown
+                data.forEach(file => {
+                    metricDropdown.innerHTML += `<option value="${file}">${file}</option>`;
+                });
+            })
+            .catch(error => {
+                console.error('Error fetching metric files:', error);
+            });
+    }
+
+    // Calculate WACC
+    function calculateWACC() {
+        const cik = document.getElementById('cik-dropdown').value;
+        const metricFile = document.getElementById('metric-dropdown').value;
+        const ticker = document.getElementById('ticker').value;
+        const riskFreeRate = document.getElementById('risk-free-rate').value;
+        const marketReturn = document.getElementById('market-return').value;
+        const taxRate = document.getElementById('tax-rate').value;
+        const costOfDebt = document.getElementById('cost-of-debt').value;
+        const startDate = document.getElementById('start-date').value;
+        const endDate = document.getElementById('end-date').value;
+
+        if (!cik || !metricFile || !ticker || !riskFreeRate || !marketReturn || !taxRate || !costOfDebt || !startDate || !endDate) {
+            alert("Please fill in all fields.");
+            return;
+        }
+
+        const payload = {
+            cik,
+            ticker,
+            metricFile,
+            riskFreeRate: parseFloat(riskFreeRate),
+            marketReturn: parseFloat(marketReturn),
+            taxRate: parseFloat(taxRate),
+            costOfDebt: parseFloat(costOfDebt),
+            startDate,
+            endDate
+        };
+
+        console.log("Payload:", payload);
+
+        fetch("http://localhost:8080/api/run-wacc", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        })
+            .then(response => response.json())
+            .then(data => {
+                console.log("API Response:", data);
+                const resultDiv = document.getElementById('wacc-result');
+                if (data.status === "success") {
+                    const filePath = data.filePath;
+
+                    // Call /api/view-wacc-results with the file path
+                    fetch(`http://localhost:8080/api/view-wacc-results?filePath=${encodeURIComponent(filePath)}`)
+                        .then(response => response.text())
+                        .then(htmlContent => {
+                            // Render the HTML content returned by the API
+                            resultDiv.innerHTML = htmlContent;
+
+                            // Add a download button
+                            resultDiv.innerHTML += `
+    <button class="btn" onclick="window.location.href='http://localhost:8080/api/download-wacc?filePath=${encodeURIComponent(filePath)}'">
+        Download WACC Results
+    </button>
+`;
+                        })
+                        .catch(error => {
+                            console.error("Error fetching WACC results view:", error);
+                            resultDiv.innerHTML = `<p style="color:red;">Error: Unable to fetch WACC results view.</p>`;
+                        });
+                } else {
+                    resultDiv.innerHTML = `<p style="color:red;">Error: ${data.message}</p>`;
+                }
+            })
+            .catch(error => {
+                console.error("Error:", error);
+                document.getElementById('wacc-result').innerHTML = `<p style="color:red;">Error: ${error.message}</p>`;
+            });
     }
 
 </script>

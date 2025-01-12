@@ -1,23 +1,21 @@
 package org.example.vo;
 
 import java.util.List;
-import java.util.Map;
 
 public class WaccCalculationResponse {
     private String status;
     private String message;
     private String filePath;
-    private List<Map<String, Object>> results;
+    private List<String> results; // Updated to handle List<String> for CSV content
 
-    // Constructors
-    public WaccCalculationResponse(String status, String message, String filePath, List<Map<String, Object>> results) {
+    // Constructors, Getters, and Setters
+    public WaccCalculationResponse(String status, String message, String filePath, List<String> results) {
         this.status = status;
         this.message = message;
         this.filePath = filePath;
         this.results = results;
     }
 
-    // Getters and setters
     public String getStatus() {
         return status;
     }
@@ -42,11 +40,11 @@ public class WaccCalculationResponse {
         this.filePath = filePath;
     }
 
-    public List<Map<String, Object>> getResults() {
+    public List<String> getResults() {
         return results;
     }
 
-    public void setResults(List<Map<String, Object>> results) {
+    public void setResults(List<String> results) {
         this.results = results;
     }
 }
