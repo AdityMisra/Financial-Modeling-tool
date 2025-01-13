@@ -408,9 +408,6 @@
             // Fetch CIKs after content is rendered
             fetchCiks();
 
-            //Restore Inputs
-            restoreWaccInputs();
-
             const cikDropdown = document.getElementById('cik-dropdown');
             if (cikDropdown) {
                 cikDropdown.addEventListener('change', fetchMetricFiles);
