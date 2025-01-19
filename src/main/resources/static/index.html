@@ -175,6 +175,29 @@
         .styled-table tbody tr:hover {
             background-color: #D5D8DC;
         }
+        .spinner {
+            border: 5px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #000;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        #loading-spinner {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
     </style>
 </head>
 <body>
@@ -222,6 +245,13 @@
                         <input type="text" id="year">
                     </div>
                     <button class="btn" onclick="fetchData()">Fetch New Data</button>
+                    <!-- Loading Spinner -->
+        <div id="loading-spinner" style="display: none;">
+            <div class="spinner"></div>
+        </div>
+
+        <div class="result" id="fetch-result"></div
+
                     <div class="result" id="fetch-result"></div>
                 `;
         } else if (option === 'Display Existing Data') {
@@ -418,51 +448,56 @@
     function fetchData() {
         const cikInput = document.getElementById('cik').value;
         const yearInput = document.getElementById('year').value;
+        const fetchResult = document.getElementById('fetch-result');
+        const loadingSpinner = document.getElementById('loading-spinner');
 
-        // Split the inputs by comma and trim any extra spaces
+        // Show the loading spinner
+        loadingSpinner.style.display = 'block';
+        fetchResult.innerText = ""; // Clear previous results
+
+        // Split inputs by comma and trim spaces
         const ciks = cikInput.split(',').map(cik => cik.trim());
         const years = yearInput.split(',').map(year => parseInt(year.trim(), 10));
 
-        // Check if inputs are valid
         if (ciks.length === 0 || years.length === 0) {
-            document.getElementById('fetch-result').innerText = "Please enter valid CIKs and Years.";
+            loadingSpinner.style.display = 'none';
+            fetchResult.innerText = "Please enter valid CIKs and Years.";
             return;
         }
 
-        // Send the POST request with proper payload
         fetch('http://localhost:8080/api/extractTables', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ciks: ciks, years: years})
         })
-            .then(response => response.json())  // Expecting JSON response
+            .then(response => response.json())
             .then(data => {
-                console.log('API Response:', data);  // Log the entire response to the console
+                console.log('API Response:', data);
 
-                // Check if the response contains 'status' and 'message'
+                let resultMessage = "";
+
                 if (data && data.status) {
-                    // Display the status and message
-                    let resultMessage = `Status: ${data.status}\nMessage: ${data.message}`;
+                    resultMessage = `Status: ${data.status}\nMessage: ${data.message}`;
 
-                    // If CSV files are available, list them
                     if (data.csvFiles && data.csvFiles.length > 0) {
-                        resultMessage += `\nGenerated CSV Files:\n- ${data.csvFiles.join('\n- ')}`;
+                         resultMessage += `\nGenerated CSV Files:\n- ${data.csvFiles.join('\n- ')}`;
                     }
 
-                    // If HTML files are available, list them
                     if (data.htmlFiles && data.htmlFiles.length > 0) {
                         resultMessage += `\nGenerated HTML Files:\n- ${data.htmlFiles.join('\n- ')}`;
                     }
-
-                    // Display the result
-                    document.getElementById('fetch-result').innerText = resultMessage;
                 } else {
-                    document.getElementById('fetch-result').innerText = 'Unexpected response format. Check the console for more details.';
+                    resultMessage = 'Unexpected response format. Check t he console for more details.';
                 }
+
+                fetchResult.innerText = resultMessage;
             })
             .catch(error => {
-                // Handle errors
-                document.getElementById('fetch-result').innerText = `Error: ${error.message}`;
+                fetchResult.innerText = `Error: ${error.message}`;
+             })
+            .finally(() => {
+                // Hide the loading spinner after fetching completes
+                loadingSpinner.style.display = 'none';
             });
     }
 
