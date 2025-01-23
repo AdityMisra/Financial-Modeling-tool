@@ -838,8 +838,13 @@ public class ScriptsService {
 
             // Construct paths for simulation directory and results file
             String simulationDir = Paths.get(outputBaseDir, "csvs", "statement_csvs", request.getCik(), "simulations").toString();
-            Path simCsvPath = Paths.get(simulationDir, request.getCik() + "_monte_carlo_results_" + request.getFromYear() +"-" + request.getToYear() + ".csv");
-
+            Path simCsvPath = Paths.get(simulationDir,
+                    request.getCik() + "_monte_carlo_results_" +
+                            request.getFromYear() +
+                            request.getToYear() +
+                            request.getNumSimulations() +
+                            request.getSimulationYears() +
+                            request.getTaxRate() * 100 + ".csv");
             // Check if cached results exist
             if (Files.exists(simCsvPath)) {
                 return new MonteCarloResponse(

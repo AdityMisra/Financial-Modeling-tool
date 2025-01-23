@@ -85,7 +85,7 @@ def run_monte_carlo_simulation(cik: str, num_simulations: int, simulation_years:
         os.makedirs(sim_dir, exist_ok=True)
 
         # Save the results to CSV and HTML files
-        output_file = os.path.join(sim_dir, f"{cik}_monte_carlo_results_{from_year}-{to_year}.csv")
+        output_file = os.path.join(sim_dir, f"{cik}_monte_carlo_results_{from_year}{to_year}{num_simulations}{simulation_years}{tax_rate * 100}.csv")
         simulation_results_df.to_csv(output_file, index=False)
 
         html_file = output_file.replace('.csv', '.html')
