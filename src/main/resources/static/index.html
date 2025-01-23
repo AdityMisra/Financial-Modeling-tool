@@ -275,7 +275,7 @@
 <!-- Dropdown for Statement Type -->
 <div class="input-group">
     <label for="statement-type">Statement Type:</label>
-    <select id="statement-type">
+    <select id="statement-type" onchange="updateButtonState()">
         <option value="balance">Balance Sheet</option>
         <option value="cash_flow">Cash Flow</option>
         <option value="income">Income Statement</option>
@@ -286,11 +286,8 @@
 <!-- Button to view statement -->
 <button class="btn" onclick="viewStatement()">View Statement</button>
 
-<!-- Button to download CSV -->
-<button class="btn" onclick="downloadCSV()">Download CSV</button>
-
-<!-- Button to download file -->
-<button class="btn" onclick="download3StatementFile()">Download 3 statement model file</button>
+<!-- Button to download statement -->
+<button class="btn" id="download-btn" onclick="downloadStatement()">Download Statement</button>
 
 <!-- Result area -->
 <div class="html-display" id="statement-result">
@@ -605,29 +602,34 @@
             });
     }
 
-    // Function to handle "Download CSV" button click
-    function downloadCSV() {
+    function downloadStatement() {
         const cik = document.getElementById('cik').value;
         const year = document.getElementById('year').value;
         const statementType = document.getElementById('statement-type').value;
 
-        let apiUrl = `http://localhost:8080/api/files/download/csv/${cik}/${statementType}/${year}`;
+        let apiUrl;
 
-        // Redirect to download URL for CSV file
+        if (statementType === '3statementmodel') {
+            // API URL for 3 Statement Model
+            apiUrl = `http://localhost:8080/api/download/3statement-model/${cik}/${year}`;
+        } else {
+            // API URL for other statement types
+            apiUrl = `http://localhost:8080/api/files/download/csv/${cik}/${statementType}/${year}`;
+        }
+
+        // Redirect to the download URL
         window.location.href = apiUrl;
     }
+    function updateButtonState() {
+        const statementType = document.getElementById('statement-type').value;
+        const downloadBtn = document.getElementById('download-btn');
 
-    // Function to handle "Download File" button click
-    function download3StatementFile() {
-        const cik = document.getElementById('cik').value;
-        const year = document.getElementById('year').value;
-
-        let apiUrl = `http://localhost:8080/api/download/3statement-model/${cik}/${year}`;
-
-        // Redirect to the file download URL
-        window.location.href = apiUrl;
+        if (statementType === '3statementmodel') {
+            downloadBtn.textContent = 'Download 3 Statement Model';
+        } else {
+            downloadBtn.textContent = 'Download Statement';
+        }
     }
-
 
     function generate3StatementModel() {
         const cik = document.getElementById("cik").value;
