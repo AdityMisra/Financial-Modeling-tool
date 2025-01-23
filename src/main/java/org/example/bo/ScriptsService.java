@@ -14,6 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.text.NumberFormat;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -375,16 +376,32 @@ public class ScriptsService {
         // Add headers
         if (!records.isEmpty()) {
             tableHtml.append("<thead><tr>");
-            for (String header : records.get(0)) {
-                tableHtml.append("<th>").append(header).append("</th>");
+            // Add headers, skipping the depth column (second column)
+            for (int i = 0; i < records.get(0).length; i++) {
+                if (i != 1) { // Skip the depth column
+                    String header = records.get(0)[i];
+
+                    // Format the third column (assume index 2 is the value column)
+                    if (i == 2) {
+                        try {
+                            double value = Double.parseDouble(header); // Parse the header value
+                            NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(Locale.US);
+                            header = currencyFormatter.format(value); // Format as currency
+                        } catch (NumberFormatException | NullPointerException e) {
+                            // Leave the header unchanged if it's not a valid number
+                        }
+                    }
+
+                    tableHtml.append("<th>").append(header).append("</th>");
+                }
             }
             tableHtml.append("</tr></thead>");
         }
 
-        // Add data rows with styling based on depth
+        // Add data rows without displaying the depth column
         tableHtml.append("<tbody>");
         for (String[] row : records.subList(1, records.size())) {
-            int depth = Integer.parseInt(row[1]); // Assuming depth is in second column
+            int depth = Integer.parseInt(row[1]); // Use depth for indentation logic only
             String backgroundColor = getBackgroundColor(statement, depth);
             String textColor = depth < 3 ? "white" : "black";
 
@@ -394,17 +411,26 @@ public class ScriptsService {
                     .append(textColor)
                     .append(";'>");
 
-            // Add indentation to API Key
-            String apiKey = "\u00A0".repeat(4 * depth) + row[0];
-            tableHtml.append("<td>").append(apiKey).append("</td>");
+            // Add the first column (Label) with indentation
+            String label = "\u00A0".repeat(4 * depth) + row[0];
+            tableHtml.append("<td>").append(label).append("</td>");
 
-            // Add remaining columns
-            for (int i = 1; i < row.length; i++) {
-                tableHtml.append("<td>").append(row[i]).append("</td>");
+            // Format the third column (Value) as currency
+            String formattedValue;
+            try {
+                double value = Double.parseDouble(row[2]); // Parse the value as a double
+                NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(Locale.US);
+                formattedValue = currencyFormatter.format(value); // Format as currency
+            } catch (NumberFormatException | NullPointerException e) {
+                formattedValue = "-"; // Handle empty or invalid values
             }
+
+            tableHtml.append("<td>").append(formattedValue).append("</td>");
             tableHtml.append("</tr>");
         }
         tableHtml.append("</tbody></table>");
+
+
 
         // Return complete HTML document
         return String.format("""
@@ -524,7 +550,20 @@ public class ScriptsService {
             // Add data
             for (CSVRecord record : parser) {
                 tableHtml.append("<tr>");
-                for (String value : record) {
+                for (int i = 0; i < record.size(); i++) {
+                    String value = record.get(i);
+
+                    // Format as currency for all columns except the first two
+                    if (i > 1 && value != null && !value.isEmpty()) {
+                        try {
+                            double numericValue = Double.parseDouble(value);
+                            NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(Locale.US);
+                            value = currencyFormatter.format(numericValue);
+                        } catch (NumberFormatException e) {
+                            // Leave value unchanged if not a number
+                        }
+                    }
+
                     tableHtml.append("<td>").append(value).append("</td>");
                 }
                 tableHtml.append("</tr>");
