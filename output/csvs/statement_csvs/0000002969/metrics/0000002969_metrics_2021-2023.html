@@ -5,21 +5,22 @@
         <style>
             body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; }
             table { border-collapse: collapse; width: 100%; }
-            th, td { 
-                border: 1px solid #ddd; 
-                padding: 8px; 
-                text-align: right; 
+            th, td {
+                border: 1px solid #ddd;
+                padding: 8px;
+                text-align: right;
             }
             th { background-color: #2c3e50; color: white; text-align: left; }
             tr:nth-child(even) { background-color: #ecf0f1; }
-            .header { 
-                background-color: #2C3E50; 
-                color: white; 
-                padding: 10px; 
-                margin-bottom: 20px; 
+            .header {
+                background-color: #2C3E50;
+                color: white;
+                padding: 10px;
+                margin-bottom: 20px;
+                box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
             }
             .metric { font-weight: bold; color: #16a085; }
-                h2 { color: #FFFFFF; }
+            h2 { color: #FFFFFF; }
             p { color: #FFFFFF; }
         </style>
     </head>
@@ -31,7 +32,7 @@
         <table border="1" class="dataframe dataframe">
   <thead>
     <tr style="text-align: right;">
-      <th>Company</th>
+      <th>CIK</th>
       <th>Year</th>
       <th>Total Assets</th>
       <th>Total Liabilities</th>
@@ -43,7 +44,6 @@
       <th>Revenue</th>
       <th>Net Income</th>
       <th>EBITDA</th>
-      <th>CIK</th>
       <th>EBITDA Margin</th>
       <th>CapEx Margin</th>
       <th>Revenue Growth Rate</th>
@@ -51,55 +51,52 @@
   </thead>
   <tbody>
     <tr>
-      <td>296900.00%</td>
-      <td>2021</td>
-      <td>2685920000000.00%</td>
-      <td>1277120000000.00%</td>
-      <td>557720000000.00%</td>
-      <td>333520000000.00%</td>
-      <td>-273290000000.00%</td>
-      <td>-142090000000.00%</td>
-      <td>87100000000.00%</td>
-      <td>1032300000000.00%</td>
-      <td>209910000000.00%</td>
-      <td>213630000000.00%</td>
       <td>0000002969</td>
+      <td>2021</td>
+      <td>$26,859,200,000</td>
+      <td>$12,771,200,000</td>
+      <td>$5,577,200,000</td>
+      <td>$3,335,200,000</td>
+      <td>$-2,732,900,000</td>
+      <td>$-1,420,900,000</td>
+      <td>$871,000,000</td>
+      <td>$10,323,000,000</td>
+      <td>$2,099,100,000</td>
+      <td>$2,136,300,000</td>
       <td>20.69%</td>
       <td>23.87%</td>
-      <td>None</td>
+      <td></td>
     </tr>
     <tr>
-      <td>296900.00%</td>
-      <td>2022</td>
-      <td>2719260000000.00%</td>
-      <td>1349020000000.00%</td>
-      <td>281710000000.00%</td>
-      <td>317060000000.00%</td>
-      <td>-385720000000.00%</td>
-      <td>-100060000000.00%</td>
-      <td>24410000000.00%</td>
-      <td>1269860000000.00%</td>
-      <td>225610000000.00%</td>
-      <td>229160000000.00%</td>
       <td>0000002969</td>
+      <td>2022</td>
+      <td>$27,192,600,000</td>
+      <td>$13,490,200,000</td>
+      <td>$2,817,100,000</td>
+      <td>$3,170,600,000</td>
+      <td>$-3,857,200,000</td>
+      <td>$-1,000,600,000</td>
+      <td>$244,100,000</td>
+      <td>$12,698,600,000</td>
+      <td>$2,256,100,000</td>
+      <td>$2,291,600,000</td>
       <td>18.05%</td>
       <td>23.05%</td>
       <td>23.01%</td>
     </tr>
     <tr>
-      <td>296900.00%</td>
-      <td>2023</td>
-      <td>3200250000000.00%</td>
-      <td>1634220000000.00%</td>
-      <td>130470000000.00%</td>
-      <td>320570000000.00%</td>
-      <td>-591640000000.00%</td>
-      <td>160960000000.00%</td>
-      <td>-142070000000.00%</td>
-      <td>1260000000000.00%</td>
-      <td>230020000000.00%</td>
-      <td>233270000000.00%</td>
       <td>0000002969</td>
+      <td>2023</td>
+      <td>$32,002,500,000</td>
+      <td>$16,342,200,000</td>
+      <td>$1,304,700,000</td>
+      <td>$3,205,700,000</td>
+      <td>$-5,916,400,000</td>
+      <td>$1,609,600,000</td>
+      <td>$-1,420,700,000</td>
+      <td>$12,600,000,000</td>
+      <td>$2,300,200,000</td>
+      <td>$2,332,700,000</td>
       <td>18.51%</td>
       <td>36.72%</td>
       <td>-0.78%</td>

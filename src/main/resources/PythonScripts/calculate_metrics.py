@@ -70,7 +70,7 @@ def calculate_cross_year_metrics(data: pd.DataFrame) -> pd.DataFrame:
     return metrics
 
 def generate_html_output(metrics: pd.DataFrame, cik: str, from_year: int, to_year: int) -> str:
-    """Generate formatted HTML output"""
+    """Generate formatted HTML output for financial metrics."""
     html_template = """
     <html>
     <head>
@@ -78,21 +78,22 @@ def generate_html_output(metrics: pd.DataFrame, cik: str, from_year: int, to_yea
         <style>
             body {{ font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; }}
             table {{ border-collapse: collapse; width: 100%; }}
-            th, td {{ 
-                border: 1px solid #ddd; 
-                padding: 8px; 
-                text-align: right; 
+            th, td {{
+                border: 1px solid #ddd;
+                padding: 8px;
+                text-align: right;
             }}
             th {{ background-color: #2c3e50; color: white; text-align: left; }}
             tr:nth-child(even) {{ background-color: #ecf0f1; }}
-            .header {{ 
-                background-color: #2C3E50; 
-                color: white; 
-                padding: 10px; 
-                margin-bottom: 20px; 
+            .header {{
+                background-color: #2C3E50;
+                color: white;
+                padding: 10px;
+                margin-bottom: 20px;
+                box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
             }}
             .metric {{ font-weight: bold; color: #16a085; }}
-                h2 {{ color: #FFFFFF; }}
+            h2 {{ color: #FFFFFF; }}
             p {{ color: #FFFFFF; }}
         </style>
     </head>
@@ -106,14 +107,28 @@ def generate_html_output(metrics: pd.DataFrame, cik: str, from_year: int, to_yea
     </html>
     """
 
-    # Format numbers in the DataFrame
+    # Preprocess DataFrame: Remove Company and make CIK the first column
+    if "Company" in metrics.columns:
+        metrics = metrics.drop(columns=["Company"])
+    if "CIK" in metrics.columns:
+        metrics = metrics[["CIK"] + [col for col in metrics.columns if col != "CIK"]]
+
+    # Define columns for percentage and numeric formatting
+    percentage_cols = ["EBITDA Margin", "CapEx Margin", "Revenue Growth Rate"]
     formatted_metrics = metrics.copy()
+
+    # Apply formatting based on column type
     for col in formatted_metrics.columns:
-        if col not in ["CIK", "Year"]:
+        if col in percentage_cols:
             formatted_metrics[col] = formatted_metrics[col].apply(
-                lambda x: f"{x:.2%}" if isinstance(x, (float, int)) else x
+                lambda x: f"{x:.2%}" if pd.notnull(x) else ""
+            )
+        elif col not in ["CIK", "Year"]:
+            formatted_metrics[col] = formatted_metrics[col].apply(
+                lambda x: f"${x:,.0f}" if pd.notnull(x) else ""
             )
 
+    # Generate the table HTML
     table_html = formatted_metrics.to_html(index=False, classes='dataframe')
     return html_template.format(
         cik=cik,
