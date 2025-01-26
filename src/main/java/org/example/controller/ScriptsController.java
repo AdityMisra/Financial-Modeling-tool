@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +40,17 @@ public class ScriptsController {
 
     @Value("${api.base.url}")
     private String apiBaseUrl;
+
+    private void validateYear(Integer year) {
+        if (year == null || year.toString().length() != 4 || year < 2000 || year > LocalDate.now().getYear()) {
+            throw new IllegalArgumentException("Invalid year: Must be a 4-digit number between 2000 and the current year.");
+        }
+    }
+    private void validateCompany(String cik) {
+        if (cik == null || cik.length() != 10 || !cik.matches("\\d+")) {
+            throw new IllegalArgumentException("Invalid CIK: Must be a 10-digit numeric value.");
+        }
+    }
 
     /**
      * Extract financial tables from SEC data
@@ -68,7 +80,6 @@ public class ScriptsController {
             );
         }
     }
-
 
     /**
      * List all generated files
@@ -123,18 +134,38 @@ public class ScriptsController {
         }
     }
 
+    /**
+     * View Statement content on Display data page
+     */
     @GetMapping("/files/view/html/{company}/{statement}/{year}")
     public ResponseEntity<String> viewStatementAsHtml(
             @PathVariable String company,
             @PathVariable String statement,
             @PathVariable Integer year) {
         try {
+            // Validate path variables
+            validateCompany(company);
+            validateYear(year);
+
+            // Generate the HTML content
             String html = scriptsService.generateHtml(company, statement, year);
+
+            // Return the HTML content
             return ResponseEntity.ok()
                     .contentType(MediaType.TEXT_HTML)
                     .body(html);
+        } catch (IllegalArgumentException e) {
+            // Return an error message as plain text in the HTML response
+            String errorHtml = "<html><body><h1>Validation Error</h1><p>" + e.getMessage() + "</p></body></html>";
+            return ResponseEntity.badRequest()
+                    .contentType(MediaType.TEXT_HTML)
+                    .body(errorHtml);
         } catch (IOException e) {
-            return ResponseEntity.notFound().build();
+            // Return an error message as plain text in the HTML response
+            String errorHtml = "<html><body><h1>File Not Found</h1><p>Statement not found for the provided parameters.</p></body></html>";
+            return ResponseEntity.status(404)
+                    .contentType(MediaType.TEXT_HTML)
+                    .body(errorHtml);
         }
     }
 
@@ -171,6 +202,8 @@ public class ScriptsController {
             @PathVariable Integer year) {
 
         try {
+            validateCompany(cik);
+            validateYear(year);
             String html = scriptsService.get3StatementModelAsHtml(cik, year);
             return ResponseEntity.ok()
                     .contentType(MediaType.TEXT_HTML)
