@@ -648,6 +648,7 @@ public class ScriptsService {
      * Get structured file listing
      */
     public Map<String, Map<Integer, List<String>>> getStructuredFileList() {
+        System.out.println("Looking for structured files in: " + outputBaseDir);
         Map<String, Map<Integer, List<String>>> structure = new HashMap<>();
 
         // Constructing the base path relative to the outputBaseDir
@@ -657,6 +658,15 @@ public class ScriptsService {
         if (!Files.exists(basePath)) {
             throw new RuntimeException("Directory does not exist: " + basePath.toString());
         }
+
+        // Load the CIK-to-Ticker mapping
+        Map<String, String> cikToTickerMap = loadCikToTickerMap("src/main/resources/constituents_transformed.csv");
+
+        structure.forEach((company, yearFiles) -> {
+            String ticker = cikToTickerMap.getOrDefault(company, "UNKNOWN");
+            structure.put(company + " (" + ticker + ")", structure.remove(company));
+        });
+
 
         try (Stream<Path> paths = Files.walk(basePath)) {
             paths.filter(Files::isRegularFile)
@@ -671,8 +681,12 @@ public class ScriptsService {
                                 int year = Integer.parseInt(relativePath.getName(1).toString());
                                 String fileName = relativePath.getFileName().toString();
 
+                                // Check for CIK and map to ticker if available
+                                String ticker = cikToTickerMap.getOrDefault(company, "UNKNOWN");
+                                String companyDisplayName = company + " (" + ticker + ")";
+
                                 // Store the files in the map
-                                structure.computeIfAbsent(company, k -> new HashMap<>())
+                                structure.computeIfAbsent(companyDisplayName, k -> new HashMap<>())
                                         .computeIfAbsent(year, k -> new ArrayList<>())
                                         .add(fileName);
                             } catch (NumberFormatException e) {
@@ -688,6 +702,43 @@ public class ScriptsService {
         }
 
         return structure;
+    }
+
+    private Map<String, String> loadCikToTickerMap(String constituentsFilePath) {
+        Map<String, String> cikToTickerMap = new HashMap<>();
+
+        try (BufferedReader reader = Files.newBufferedReader(Paths.get(constituentsFilePath))) {
+            String line;
+            boolean header = true;
+
+            while ((line = reader.readLine()) != null) {
+                if (header) {
+                    header = false; // Skip the header line
+                    continue;
+                }
+
+                String[] parts = line.split(",");
+                if (parts.length >= 2) {
+                    try {
+                        String cik = parts[7].trim();
+                        String ticker = parts[0].trim();
+
+                        // Pad CIK to 10 digits
+                        String paddedCik = String.format("%010d", Integer.parseInt(cik));
+                        cikToTickerMap.put(paddedCik, ticker);
+                    } catch (NumberFormatException e) {
+                        System.err.println("Invalid CIK format: " + parts[7] + " | " + e.getMessage());
+                    }
+                } else {
+                    System.err.println("Malformed line in CSV: " + line);
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new RuntimeException("Error reading constituents.csv: " + e.getMessage(), e);
+        }
+
+        return cikToTickerMap;
     }
 
 
