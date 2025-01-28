@@ -15,6 +15,8 @@ This project focuses on building a financial modeling tool to analyze companies'
 - Performing Monte Carlo simulations for EBITDA, Cash Balances, and Net Income.
 
 - Calculating WACC using current cost of debt and 3-year historical beta
+
+- Phase 1 Completion video : https://youtu.be/jBycvnRF_XI
 ---
 
 ## **Phase 2: Work in Progress**
